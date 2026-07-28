@@ -6,8 +6,18 @@
     <Project Path="src/aspire/AtProto.AppHost/AtProto.AppHost.csproj" />
     <Project Path="src/aspire/AtProto.ServiceDefaults/AtProto.ServiceDefaults.csproj" />
   </Folder>
+  <Folder Name="/src/core/">
+    <Project Path="src/core/AtProto.Cid/AtProto.Cid.csproj" />
+    <Project Path="src/core/AtProto.Cbor/AtProto.Cbor.csproj" />
+    <Project Path="src/core/AtProto.Car/AtProto.Car.csproj" />
+    <Project Path="src/core/AtProto.Repo/AtProto.Repo.csproj" />
+    <Project Path="src/core/AtProto.Lexicon/AtProto.Lexicon.csproj" />
+    <Project Path="src/core/AtProto.Identity/AtProto.Identity.csproj" />
+    <Project Path="src/core/AtProto.Firehose/AtProto.Firehose.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AtProto.Fixtures.Tests/AtProto.Fixtures.Tests.csproj" />
+    <Project Path="tests/AtProto.Core.Tests/AtProto.Core.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/AtProto.Fixtures.Tool/AtProto.Fixtures.Tool.csproj" />
