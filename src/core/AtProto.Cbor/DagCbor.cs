@@ -20,6 +20,90 @@ public static class DagCbor
     /// <summary>The IPLD "CID link" CBOR tag.</summary>
     public const int CidTag = 42;
 
+    /// <summary>
+    /// Encode a plain .NET object graph (the same shape <see cref="Decode"/> produces) into
+    /// canonical DAG-CBOR bytes. Canonical rules are enforced via
+    /// <see cref="CborConformanceMode.Canonical"/>: map keys sorted length-first-then-bytewise,
+    /// definite lengths, shortest-form integers. CID links are written as tag 42 over a byte
+    /// string carrying the <c>0x00</c> multibase-identity prefix followed by the binary CID.
+    /// </summary>
+    /// <remarks>
+    /// The accepted value types mirror the decode model: <c>null</c>, <see cref="bool"/>,
+    /// <see cref="long"/>, <see cref="ulong"/>, <see cref="byte"/>[], <see cref="string"/>,
+    /// <see cref="double"/>, <see cref="Cid"/>, <see cref="IReadOnlyList{T}"/> of object?, and
+    /// <see cref="IReadOnlyDictionary{TKey,TValue}"/> with string keys. Note DAG-CBOR requires
+    /// 64-bit floats; the Canonical writer shortens floats, so this encoder is byte-exact only
+    /// for float-free graphs (which is every MST node and commit object).
+    /// </remarks>
+    public static byte[] Encode(object? value)
+    {
+        var writer = new CborWriter(CborConformanceMode.Canonical, convertIndefiniteLengthEncodings: true);
+        WriteValue(writer, value);
+        return writer.Encode();
+    }
+
+    private static void WriteValue(CborWriter writer, object? value)
+    {
+        switch (value)
+        {
+            case null:
+                writer.WriteNull();
+                break;
+            case bool b:
+                writer.WriteBoolean(b);
+                break;
+            case Cid cid:
+                writer.WriteTag((CborTag)CidTag);
+                writer.WriteByteString(CidLinkBytes(cid));
+                break;
+            case string s:
+                writer.WriteTextString(s);
+                break;
+            case byte[] bytes:
+                writer.WriteByteString(bytes);
+                break;
+            case long l:
+                writer.WriteInt64(l);
+                break;
+            case ulong u:
+                writer.WriteUInt64(u);
+                break;
+            case int i:
+                writer.WriteInt64(i);
+                break;
+            case double d:
+                writer.WriteDouble(d);
+                break;
+            case IReadOnlyDictionary<string, object?> map:
+                writer.WriteStartMap(map.Count);
+                foreach (KeyValuePair<string, object?> kv in map)
+                {
+                    writer.WriteTextString(kv.Key);
+                    WriteValue(writer, kv.Value);
+                }
+                writer.WriteEndMap();
+                break;
+            case IReadOnlyList<object?> list:
+                writer.WriteStartArray(list.Count);
+                foreach (object? item in list)
+                    WriteValue(writer, item);
+                writer.WriteEndArray();
+                break;
+            default:
+                throw new FormatException($"cannot dag-cbor encode value of type {value.GetType()}");
+        }
+    }
+
+    /// <summary>The tag-42 byte-string payload for a CID: the 0x00 identity prefix then the binary CID.</summary>
+    private static byte[] CidLinkBytes(Cid cid)
+    {
+        ReadOnlySpan<byte> binary = cid.Binary;
+        var link = new byte[binary.Length + 1];
+        link[0] = 0x00;
+        binary.CopyTo(link.AsSpan(1));
+        return link;
+    }
+
     /// <summary>Decode a single DAG-CBOR value; throws if trailing bytes remain.</summary>
     public static object? Decode(ReadOnlySpan<byte> data)
     {
