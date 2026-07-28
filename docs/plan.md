@@ -20,7 +20,8 @@ Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at 
 | **T0** golden-vectors harness | ✅ done | `ab0cf0e` | real repo.car 703KB + record proofs + 12 firehose frames frozen; Fixtures.Tests 5/5 |
 | **M1** reactive firehose core (public) | ✅ done | `85ba41f`, `4d49bc7`, `0cfbb97` | codecs verified vs real repo (Core 15/15, Firehose 5/5); probe live-verified ~55 posts/s + cursor resume + `aspire run` |
 | **M2** AppView presence board (public) | ✅ done | `6456fab` | AppView 7/7; **live smoke** vs relay1.us-west (zero creds): board populated, getStats advanced (totalUpdates 1970→2934, lastSeq rising ~50–56/s), latest-wins confirmed |
-| **M3** our PDS (MST write) | 🔴 **NEXT — human gate** | — | build MST vs T0 vectors, then **human confirms root CID == reference** before PDS writes |
+| **Orchestration** `aspire run` end-to-end | ✅ verified | `7a3f4d8` | dashboard (`:17046`, HTTP 302) + FirehoseProbe + AppView all up; AppView served live board (6358 users, ~71/s) through DCP-assigned ports. WSL dev-cert fix documented in README |
+| **M3** our PDS (MST **write**) | 🔴 **NEXT — human gate** | — | build MST vs T0 vectors, then **human confirms root CID == reference** before PDS writes |
 | M4 relay · M5 Aspire integrations | ⚪ pending | — | autopilot after M3 |
 | M6 stretch | ⚪ deferred | — | not in autopilot run |
 
