@@ -45,6 +45,23 @@ public sealed class FirehoseClient
     }
 
     /// <summary>
+    /// Build a client from a service base URL of any scheme. <c>http</c>/<c>https</c> are normalized
+    /// to <c>ws</c>/<c>wss</c> and the <c>subscribeRepos</c> path is appended — so an Aspire
+    /// <c>http://</c> endpoint reference for a self-hosted PDS/Relay just works.
+    /// </summary>
+    public static FirehoseClient ForUrl(string baseUrl)
+    {
+        string u = baseUrl.TrimEnd('/');
+        if (u.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            u = "ws://" + u["http://".Length..];
+        else if (u.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            u = "wss://" + u["https://".Length..];
+        else if (!u.Contains("://", StringComparison.Ordinal))
+            u = "wss://" + u;
+        return new FirehoseClient(new Uri(u + SubscribePath));
+    }
+
+    /// <summary>
     /// Subscribe with automatic reconnect/resume. Yields events in seq order across reconnects;
     /// the resume cursor advances as events are produced.
     /// </summary>

@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/apps/">
     <Project Path="src/apps/AtProto.FirehoseProbe/AtProto.FirehoseProbe.csproj" />
+    <Project Path="src/apps/AtProto.StatusSeeder/AtProto.StatusSeeder.csproj" />
   </Folder>
   <Folder Name="/src/aspire/">
     <Project Path="src/aspire/AtProto.AppHost/AtProto.AppHost.csproj" />

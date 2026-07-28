@@ -2,10 +2,22 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 builder.AddProject<Projects.AtProto_FirehoseProbe>("firehoseprobe");
 
-// AppView presence board over the PUBLIC relay firehose (zero credentials). Default the projection
-// to app.bsky.feed.post so the live board is populated for the M2 demo; override AppView__Collection
-// to place.selfhost.status once our own PDS (M3) writes real status records.
+// Our self-hosted PDS. It advertises its own address (drives did:web + the service endpoint).
+var pds = builder.AddProject<Projects.AtProto_Pds>("pds");
+pds.WithEnvironment("Pds__PublicUrl", pds.GetEndpoint("http"));
+
+// AppView presence board over OUR PDS firehose, indexing the demo status collection. Point it at
+// the PDS's subscribeRepos endpoint via service discovery (http is normalized to ws by the client).
 builder.AddProject<Projects.AtProto_AppView>("appview")
-    .WithEnvironment("AppView__Collection", "app.bsky.feed.post");
+    .WithReference(pds)
+    .WaitFor(pds)
+    .WithEnvironment("AppView__Collection", "place.selfhost.status")
+    .WithEnvironment("Firehose__Url", pds.GetEndpoint("http"));
+
+// Demo traffic: register accounts on the PDS and write live status records so the board populates.
+builder.AddProject<Projects.AtProto_StatusSeeder>("statusseeder")
+    .WithReference(pds)
+    .WaitFor(pds)
+    .WithEnvironment("Pds__Url", pds.GetEndpoint("http"));
 
 builder.Build().Run();

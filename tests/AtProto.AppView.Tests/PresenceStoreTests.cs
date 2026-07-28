@@ -16,6 +16,7 @@ public class PresenceStoreTests
             Collection: "place.selfhost.status",
             Rkey: "self",
             Cid: $"cid-{seq}",
+            Status: "😀",
             Seq: seq,
             UpdatedAt: DateTimeOffset.UnixEpoch.AddSeconds(seq),
             Action: action);

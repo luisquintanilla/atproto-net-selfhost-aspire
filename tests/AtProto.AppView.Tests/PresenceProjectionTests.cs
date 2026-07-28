@@ -12,7 +12,7 @@ namespace AtProto.AppView.Tests;
 public class PresenceProjectionTests
 {
     private static StatusUpdate Update(string did, long seq, RepoOpAction action = RepoOpAction.Create) =>
-        new(did, "place.selfhost.status", "self", $"cid-{seq}", seq, DateTimeOffset.UnixEpoch.AddSeconds(seq), action);
+        new(did, "place.selfhost.status", "self", $"cid-{seq}", "😀", seq, DateTimeOffset.UnixEpoch.AddSeconds(seq), action);
 
     [Fact]
     public void Connect_applies_pushed_updates_to_the_store()

@@ -66,29 +66,43 @@ docs/        architecture notes and ADRs
 # build everything
 dotnet build atproto-net-selfhost-aspire.slnx
 
-# run the orchestrated stack (dashboard + services)
+# run the orchestrated self-hosted stack (dashboard + services)
 aspire run --project src/aspire/AtProto.AppHost
 ```
 
 `aspire run` boots the Aspire dashboard (watch the console for the
-`https://localhost:17046/login?t=…` URL) plus the `FirehoseProbe` worker and the `AppView`
-presence board. The AppView is pre-wired to the **public** Bluesky relay firehose
-(`app.bsky.feed.post`, zero credentials), so its board fills with live data within seconds — open
-the `appview` resource from the dashboard, or hit `/xrpc/place.selfhost.getPresence` /
-`getStats` on its assigned port.
+`https://localhost:17046/login?t=…` URL) and the full **self-hosted loop**: our own **PDS**
+(`did:web`), the **AppView** presence board subscribed to that PDS's firehose, a **StatusSeeder**
+that registers a handful of demo accounts and writes live `place.selfhost.status` records, and the
+**FirehoseProbe**. Within seconds the board fills with self-authored data flowing
+**PDS → firehose → AppView** — open the `appview` resource from the dashboard, or hit
+`/xrpc/place.selfhost.getPresence` / `getStats` on its assigned port. Each row shows the account
+DID and its latest **emoji**, decoded from the commit's CAR slice (latest-wins per account).
+
+> **WSL: use the all-HTTP launch profile.** The Aspire dashboard binds HTTPS by default, which can
+> fail to bind under WSL even with a valid dev cert (`aspire run` aborts with a
+> `TaskCanceledException` at `KestrelServerImpl.BindAsync`, exit code 134). The reliable fix is the
+> repo's `http` launch profile (dashboard + OTLP + resource-service all over HTTP):
+> ```bash
+> ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
+>   dotnet run --project src/aspire/AtProto.AppHost/AtProto.AppHost.csproj --launch-profile http
+> ```
+> The dashboard then comes up on `http://localhost:15194`; service ports are proxied by DCP
+> (e.g. PDS on `:5271`, AppView on `:5193`).
 
 To run just the board without the dashboard: `dotnet run --project src/services/AtProto.AppView`
-(→ http://localhost:5193).
+(→ http://localhost:5193). By default it points at the **public** Bluesky relay (set
+`Firehose__Url` to point it at a self-hosted PDS/relay instead).
 
 ## Roadmap
 
 The build is phased. Each milestone is independently demoable.
 
 - **M0** - repo bootstrap and Aspire skeleton *(done)*
-- **T0** - golden-vectors fixture harness (real repo CARs/CIDs/MST roots, frozen for tests)
-- **M1** - reactive firehose core, validated live against the public Bluesky relay
-- **M2** - AppView "presence board" over the public firehose (emoji status, latest-wins)
-- **M3** - our own PDS (`did:web`), MST build + commit signing + CAR write
+- **T0** - golden-vectors fixture harness (real repo CARs/CIDs/MST roots, frozen for tests) *(done)*
+- **M1** - reactive firehose core, validated live against the public Bluesky relay *(done)*
+- **M2** - AppView "presence board" over the public firehose (emoji status, latest-wins) *(done)*
+- **M3** - our own PDS (`did:web`), MST build + commit signing + CAR write *(done — self-hosted PDS → AppView loop runs under `aspire run`)*
 - **M4** - our own Relay (aggregate PDS firehoses, global sequence)
 - **M5** - Aspire orchestration + custom "native" integrations
 - **M6** - stretch: federation discovery, did:plc, OAuth, packaging

@@ -8,6 +8,7 @@ public sealed record StatusUpdate(
     string Collection,
     string Rkey,
     string? Cid,
+    string? Status,
     long Seq,
     DateTimeOffset UpdatedAt,
     RepoOpAction Action);
@@ -17,6 +18,7 @@ public sealed record PresenceEntry(
     string Did,
     string Rkey,
     string? Cid,
+    string? Status,
     long Seq,
     DateTimeOffset UpdatedAt);
 

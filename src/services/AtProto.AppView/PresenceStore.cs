@@ -31,7 +31,7 @@ public sealed class PresenceStore
             return null;
         }
 
-        var candidate = new PresenceEntry(update.Did, update.Rkey, update.Cid, update.Seq, update.UpdatedAt);
+        var candidate = new PresenceEntry(update.Did, update.Rkey, update.Cid, update.Status, update.Seq, update.UpdatedAt);
         return _latest.AddOrUpdate(
             update.Did,
             candidate,

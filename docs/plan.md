@@ -12,7 +12,10 @@ Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at 
 
 ## 0. Progress (live status — updated 2026-07-28)
 
-**Autopilot lane `M0 → T0 → M1 → M2` is COMPLETE and verified. M3 MST-write built and the root-CID human gate is CLEARED (root + all 462 node blocks reproduce the real repo byte-for-byte) — paused for sign-off before wiring PDS writes (§5a / §7).**
+**Autopilot lane `M0 → T0 → M1 → M2 → M3` is COMPLETE and verified. The full self-hosted stack (our PDS →
+AppView presence board) runs end-to-end under `aspire run`, with a StatusSeeder writing live
+`place.selfhost.status` records that light up the board with decoded emoji. Next on autopilot: M4 (Relay) → M5
+(Aspire native integrations).**
 
 | Phase | Status | Commit | Evidence |
 |-------|--------|--------|----------|
@@ -21,21 +24,24 @@ Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at 
 | **M1** reactive firehose core (public) | ✅ done | `85ba41f`, `4d49bc7`, `0cfbb97` | codecs verified vs real repo (Core 15/15, Firehose 5/5); probe live-verified ~55 posts/s + cursor resume + `aspire run` |
 | **M2** AppView presence board (public) | ✅ done | `6456fab` | AppView 7/7; **live smoke** vs relay1.us-west (zero creds): board populated, getStats advanced (totalUpdates 1970→2934, lastSeq rising ~50–56/s), latest-wins confirmed |
 | **Orchestration** `aspire run` end-to-end | ✅ verified | `7a3f4d8` | dashboard (`:17046`, HTTP 302) + FirehoseProbe + AppView all up; AppView served live board (6358 users, ~71/s) through DCP-assigned ports. WSL dev-cert fix documented in README |
-| **M3 (to gate)** MST **write** core | 🟢 **GATE CLEARED — awaiting sign-off** | *(uncommitted)* | rebuilt MST root == reference `commit.data` **exactly** (`bafyreidhtvnyv4ezasoy624qdxk2kajzxcxzk4v3dcoxb24q3wftv6ubfi`); **462/462** node blocks byte-identical; canonical encoder round-trips **2133/2133** real blocks. New tests 7/7 |
-| **M3 (post-gate)** PDS writes: signing · CAR write · XRPC · firehose | 🔴 **paused for human go-ahead** | — | k256/p256 commit signing, `AtProto.Pds` XRPC, `getRepo` CAR, own `subscribeRepos`, did:web |
+| **M3 (gate)** MST **write** core | ✅ done | `f56b25d` | rebuilt MST root == reference `commit.data` **exactly** (`bafyrei…v6ubfi`); **462/462** node blocks byte-identical; canonical encoder round-trips **2133/2133** real blocks |
+| **M3** PDS writes: signing · CAR write · XRPC · firehose | ✅ done | `ce0d5a5`, `f4e4cf7`, `5aa01dc`, `4058ee6` | k256/p256 commit signing (verifies the real bsky sig); CARv1 writer byte-exact vs the 720478-byte export; `AtProto.Pds` XRPC + did:web; **Pds e2e 4/4** — an independent firehose client reads a signature-verifiable `#commit`, `getRepo` CARv1 validates |
+| **Capstone** self-hosted PDS → AppView loop under `aspire run` | ✅ verified | *(this change)* | AppView repointed at **our** PDS (`Firehose__Url`); `StatusSeeder` writes `place.selfhost.status`; board shows the **decoded emoji**, latest-wins per DID. **Live**: 6 users, getStats advancing (totalUpdates 76→78, lastSeq 88→90), board HTTP 200. New `SelfHostedLoopTests` drives the real ingest→Rx-projection in-process |
 | M4 relay · M5 Aspire integrations | ⚪ pending | — | autopilot after M3 |
 | M6 stretch | ⚪ deferred | — | not in autopilot run |
 
-**Totals:** 39/39 tests green (Fixtures 5, Core 22, Firehose 5, AppView 7). Reactive layering held exactly as
-decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only.
+**Totals:** 60/60 tests green (Fixtures 5, Core 38, Firehose 5, AppView 7, Pds 5). Reactive layering held exactly
+as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only.
 
-**The one human gate is met.** `DagCbor.Encode` (canonical) + `Mst.Build` reproduce the real repo's MST
-**root CID and every one of its 462 node blocks byte-for-byte** — the strongest possible proof the write-side
-tree is correct — with no crypto involved (the root is a pure function of the (key→value CID) content).
-**Next action (on go-ahead):** wire post-gate PDS writes — secp256k1/p256 commit signing, `AtProto.Pds` XRPC
-(`createRecord`/`applyWrites`/`getRecord`/`listRecords`), `getRepo` CAR export, emit our own `subscribeRepos`
-firehose, did:web + `/.well-known/did.json` — then point the existing AppView at our PDS to light up the full
-self-hosted loop, and continue M4 → M5 on autopilot.
+**M3 is complete and the capstone loop is live.** The self-hosted stack — our own **PDS** (did:web, MST write,
+k256/p256 commit signing, CARv1 write, `subscribeRepos` firehose) → **AppView** (Rx presence projection) — runs
+end-to-end under `aspire run`, with a `StatusSeeder` writing real `place.selfhost.status` records that light up
+the board with their decoded emoji (latest-wins per account). Proven three ways: the MST root-CID gate (462/462
+node blocks byte-identical to the reference), the PDS e2e suite (a `#commit` an independent consumer verifies),
+and a new in-process `SelfHostedLoopTests` that runs the actual AppView ingest against our PDS.
+**Next action:** **M4** (our own Relay — reuse `FirehoseBroadcaster`, subscribe the upstream PDS, assign a global
+seq, re-emit) then **M5** (Aspire "native" integrations — `AddAtprotoPds/Relay/AppView` + `.WithReference()`
+auto-wiring), both on autopilot.
 
 ---
 

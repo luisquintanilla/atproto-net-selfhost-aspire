@@ -24,6 +24,7 @@ app.MapGet("/xrpc/place.selfhost.getPresence", (PresenceStore store, int? limit)
         did = e.Did,
         rkey = e.Rkey,
         cid = e.Cid,
+        status = e.Status,
         seq = e.Seq,
         updatedAt = e.UpdatedAt,
     });
@@ -36,7 +37,7 @@ app.MapGet("/xrpc/place.selfhost.getStatus", (PresenceStore store, string did) =
     PresenceEntry? entry = store.Get(did);
     return entry is null
         ? Results.NotFound(new { error = "NotFound", message = $"no status for {did}" })
-        : Results.Ok(new { did = entry.Did, rkey = entry.Rkey, cid = entry.Cid, seq = entry.Seq, updatedAt = entry.UpdatedAt });
+        : Results.Ok(new { did = entry.Did, rkey = entry.Rkey, cid = entry.Cid, status = entry.Status, seq = entry.Seq, updatedAt = entry.UpdatedAt });
 });
 
 // Live board statistics (from the Rx windowed projection).
@@ -72,6 +73,7 @@ internal static class BoardPage
         .stats { color: #555; margin-bottom: 1rem; }
         table { border-collapse: collapse; width: 100%; max-width: 900px; }
         th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #eee; font-variant-numeric: tabular-nums; }
+        td.status { font-size: 20px; }
         code { font-size: 12px; }
       </style>
     </head>
@@ -79,7 +81,7 @@ internal static class BoardPage
       <h1>presence board <small>(self-hosted atproto AppView)</small></h1>
       <div class="stats" id="stats">connecting…</div>
       <table>
-        <thead><tr><th>#</th><th>did</th><th>rkey</th><th>seq</th><th>updated</th></tr></thead>
+        <thead><tr><th>#</th><th>status</th><th>did</th><th>rkey</th><th>seq</th><th>updated</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <script>
@@ -92,7 +94,7 @@ internal static class BoardPage
             document.getElementById('stats').textContent =
               `${s.uniqueUsers} users · ${s.totalUpdates} updates · ${s.updatesPerSecond}/s · seq ${s.lastSeq}`;
             document.getElementById('rows').innerHTML = p.presence.map((e, i) =>
-              `<tr><td>${i + 1}</td><td><code>${e.did}</code></td><td><code>${e.rkey}</code></td>` +
+              `<tr><td>${i + 1}</td><td class="status">${e.status ?? ''}</td><td><code>${e.did}</code></td><td><code>${e.rkey}</code></td>` +
               `<td>${e.seq}</td><td>${new Date(e.updatedAt).toLocaleTimeString()}</td></tr>`).join('');
           } catch (e) { /* transient */ }
         }

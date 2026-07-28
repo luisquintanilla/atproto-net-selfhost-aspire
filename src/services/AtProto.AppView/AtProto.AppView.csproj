@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\core\AtProto.Firehose\AtProto.Firehose.csproj" />
+    <ProjectReference Include="..\..\core\AtProto.Car\AtProto.Car.csproj" />
+    <ProjectReference Include="..\..\core\AtProto.Cbor\AtProto.Cbor.csproj" />
     <ProjectReference Include="..\..\core\AtProto.Identity\AtProto.Identity.csproj" />
     <ProjectReference Include="..\..\core\AtProto.Lexicon\AtProto.Lexicon.csproj" />
     <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />

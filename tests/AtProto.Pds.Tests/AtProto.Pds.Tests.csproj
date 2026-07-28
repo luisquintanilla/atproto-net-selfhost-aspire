@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\services\AtProto.Pds\AtProto.Pds.csproj" />
+    <ProjectReference Include="..\..\src\services\AtProto.AppView\AtProto.AppView.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Firehose\AtProto.Firehose.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Car\AtProto.Car.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Repo\AtProto.Repo.csproj" />
