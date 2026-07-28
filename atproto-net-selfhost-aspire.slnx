@@ -18,12 +18,14 @@
   </Folder>
   <Folder Name="/src/services/">
     <Project Path="src/services/AtProto.AppView/AtProto.AppView.csproj" />
+    <Project Path="src/services/AtProto.Pds/AtProto.Pds.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AtProto.Fixtures.Tests/AtProto.Fixtures.Tests.csproj" />
     <Project Path="tests/AtProto.Core.Tests/AtProto.Core.Tests.csproj" />
     <Project Path="tests/AtProto.Firehose.Tests/AtProto.Firehose.Tests.csproj" />
     <Project Path="tests/AtProto.AppView.Tests/AtProto.AppView.Tests.csproj" />
+    <Project Path="tests/AtProto.Pds.Tests/AtProto.Pds.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/AtProto.Fixtures.Tool/AtProto.Fixtures.Tool.csproj" />

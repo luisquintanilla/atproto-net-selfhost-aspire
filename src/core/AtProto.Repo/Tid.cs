@@ -36,7 +36,7 @@ public static class Tid
             throw new FormatException($"'{tid}' is not a valid TID.");
         ulong value = 0;
         foreach (char c in tid)
-            value = (value << 5) | (ulong)Alphabet.IndexOf(c);
+            value = (value << 5) | (uint)Alphabet.IndexOf(c);
         return value;
     }
 

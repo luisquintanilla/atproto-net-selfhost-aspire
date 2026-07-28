@@ -88,6 +88,29 @@ public sealed class RepoStore
     /// <summary>The live <c>collection/rkey → record-CID</c> map.</summary>
     public IReadOnlyDictionary<string, Cid> Records => _records;
 
+    /// <summary>Look up a single record's value CID and dag-cbor bytes.</summary>
+    public bool TryGetRecord(string collection, string rkey, out Cid cid, out byte[] bytes)
+    {
+        if (_records.TryGetValue($"{collection}/{rkey}", out cid))
+        {
+            bytes = _blocks[cid];
+            return true;
+        }
+        cid = default;
+        bytes = Array.Empty<byte>();
+        return false;
+    }
+
+    /// <summary>Enumerate a collection's records in ascending rkey (MST key) order.</summary>
+    public IEnumerable<RepoRecord> ListCollection(string collection)
+    {
+        string prefix = collection + "/";
+        return _records
+            .Where(kv => kv.Key.StartsWith(prefix, StringComparison.Ordinal))
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => new RepoRecord(kv.Key, kv.Value));
+    }
+
     /// <summary>Create an empty repository with a genesis commit over an empty MST.</summary>
     public static RepoStore CreateEmpty(EcKeypair key, string did, TidClock? clock = null)
     {
