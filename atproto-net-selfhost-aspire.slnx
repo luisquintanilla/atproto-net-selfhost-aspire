@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/apps/">
+    <Project Path="src/apps/AtProto.FirehoseProbe/AtProto.FirehoseProbe.csproj" />
+  </Folder>
+  <Folder Name="/src/aspire/">
+    <Project Path="src/aspire/AtProto.AppHost/AtProto.AppHost.csproj" />
+    <Project Path="src/aspire/AtProto.ServiceDefaults/AtProto.ServiceDefaults.csproj" />
+  </Folder>
+</Solution>
