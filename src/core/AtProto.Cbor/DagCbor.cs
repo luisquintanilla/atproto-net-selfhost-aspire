@@ -30,6 +30,18 @@ public static class DagCbor
         return value;
     }
 
+    /// <summary>
+    /// Decode the first DAG-CBOR value from a buffer that may contain more after it, reporting how
+    /// many bytes it consumed. Used for firehose frames (header CBOR followed by payload CBOR).
+    /// </summary>
+    public static object? DecodeFirst(ReadOnlyMemory<byte> data, out int bytesConsumed)
+    {
+        var reader = new CborReader(data, CborConformanceMode.Strict);
+        object? value = ReadValue(reader);
+        bytesConsumed = data.Length - reader.BytesRemaining;
+        return value;
+    }
+
     private static object? ReadValue(CborReader reader)
     {
         CborReaderState state = reader.PeekState();
