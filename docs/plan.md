@@ -6,7 +6,7 @@ A from-scratch .NET mono-repo that implements the AT Protocol (atproto) core ser
 projection layer, and **.NET Aspire** as the orchestrator. The end goal: these services become reusable
 **components** you plug in as **native Aspire integrations** to *host your own atproto stack*.
 
-Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at `~/src/atproto-net-selfhost-aspire`.
+Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at `~/dev/experiments/atproto-net-selfhost-aspire`.
 
 ---
 
