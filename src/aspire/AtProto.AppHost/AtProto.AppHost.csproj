@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <ProjectReference Include="..\..\apps\AtProto.FirehoseProbe\AtProto.FirehoseProbe.csproj" />
+    <ProjectReference Include="..\..\services\AtProto.AppView\AtProto.AppView.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

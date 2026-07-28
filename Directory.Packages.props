@@ -6,6 +6,9 @@
     <!-- Core codecs -->
     <PackageVersion Include="System.Formats.Cbor" Version="10.0.8" />
 
+    <!-- Reactive projection layer (AppView only; see plan §2a) -->
+    <PackageVersion Include="System.Reactive" Version="7.0.0" />
+
     <!-- ServiceDefaults: resilience + service discovery + OpenTelemetry -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.0.0" />
