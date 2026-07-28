@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\core\AtProto.Cid\AtProto.Cid.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Cbor\AtProto.Cbor.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Car\AtProto.Car.csproj" />
+    <ProjectReference Include="..\..\src\core\AtProto.Crypto\AtProto.Crypto.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Repo\AtProto.Repo.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Lexicon\AtProto.Lexicon.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Identity\AtProto.Identity.csproj" />

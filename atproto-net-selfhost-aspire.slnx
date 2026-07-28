@@ -10,6 +10,7 @@
     <Project Path="src/core/AtProto.Cid/AtProto.Cid.csproj" />
     <Project Path="src/core/AtProto.Cbor/AtProto.Cbor.csproj" />
     <Project Path="src/core/AtProto.Car/AtProto.Car.csproj" />
+    <Project Path="src/core/AtProto.Crypto/AtProto.Crypto.csproj" />
     <Project Path="src/core/AtProto.Repo/AtProto.Repo.csproj" />
     <Project Path="src/core/AtProto.Lexicon/AtProto.Lexicon.csproj" />
     <Project Path="src/core/AtProto.Identity/AtProto.Identity.csproj" />

@@ -4,6 +4,7 @@
     <ProjectReference Include="..\AtProto.Cid\AtProto.Cid.csproj" />
     <ProjectReference Include="..\AtProto.Cbor\AtProto.Cbor.csproj" />
     <ProjectReference Include="..\AtProto.Car\AtProto.Car.csproj" />
+    <ProjectReference Include="..\AtProto.Crypto\AtProto.Crypto.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
