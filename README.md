@@ -47,6 +47,18 @@ docs/        architecture notes and ADRs
 
 - .NET SDK **10.0.300** (pinned in `global.json`)
 - .NET Aspire CLI (`aspire`) 13.x
+- A **single, valid HTTPS dev certificate** (the Aspire dashboard binds HTTPS). On a fresh
+  machine — and especially on **WSL** — run this once:
+
+  ```bash
+  dotnet dev-certs https --clean   # remove any stale/duplicate localhost certs
+  dotnet dev-certs https --trust   # generate one cert (trust "partially fails" on WSL — that's fine)
+  ```
+
+  > Why: if **multiple** dev certs exist (or none), Kestrel can't cleanly bind the dashboard's
+  > HTTPS endpoints and `aspire run` aborts early with a `TaskCanceledException` at
+  > `KestrelServerImpl.BindAsync` (process exit code 134). One valid cert fixes it; the WSL
+  > "trust partially failed" warning only affects the browser padlock, not binding.
 
 ## Build & run
 
@@ -58,7 +70,15 @@ dotnet build atproto-net-selfhost-aspire.slnx
 aspire run --project src/aspire/AtProto.AppHost
 ```
 
-`aspire run` boots the Aspire dashboard and the placeholder `FirehoseProbe` worker.
+`aspire run` boots the Aspire dashboard (watch the console for the
+`https://localhost:17046/login?t=…` URL) plus the `FirehoseProbe` worker and the `AppView`
+presence board. The AppView is pre-wired to the **public** Bluesky relay firehose
+(`app.bsky.feed.post`, zero credentials), so its board fills with live data within seconds — open
+the `appview` resource from the dashboard, or hit `/xrpc/place.selfhost.getPresence` /
+`getStats` on its assigned port.
+
+To run just the board without the dashboard: `dotnet run --project src/services/AtProto.AppView`
+(→ http://localhost:5193).
 
 ## Roadmap
 
