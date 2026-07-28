@@ -1,0 +1,58 @@
+{
+  "handle": "atproto.com",
+  "did": "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+  "didDoc": {
+    "@context": [
+      "https://www.w3.org/ns/did/v1",
+      "https://w3id.org/security/multikey/v1",
+      "https://w3id.org/security/suites/secp256k1-2019/v1"
+    ],
+    "id": "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+    "alsoKnownAs": [
+      "at://atproto.com"
+    ],
+    "verificationMethod": [
+      {
+        "id": "did:plc:ewvi7nxzyoun6zhxrhs64oiz#atproto",
+        "type": "Multikey",
+        "controller": "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+        "publicKeyMultibase": "zQ3shunBKsXixLxKtC5qeSG9E4J5RkGN57im31pcTzbNQnm5w"
+      }
+    ],
+    "service": [
+      {
+        "id": "#atproto_pds",
+        "type": "AtprotoPersonalDataServer",
+        "serviceEndpoint": "https://enoki.us-east.host.bsky.network"
+      }
+    ]
+  },
+  "collections": [
+    "actor.rpg.stats",
+    "app.bsky.actor.profile",
+    "app.bsky.feed.generator",
+    "app.bsky.feed.like",
+    "app.bsky.feed.post",
+    "app.bsky.feed.postgate",
+    "app.bsky.feed.repost",
+    "app.bsky.feed.threadgate",
+    "app.bsky.graph.block",
+    "app.bsky.graph.follow",
+    "app.bsky.graph.list",
+    "app.bsky.graph.listitem",
+    "app.bsky.graph.starterpack",
+    "chat.bsky.actor.declaration",
+    "community.lexicon.calendar.event",
+    "community.lexicon.calendar.rsvp",
+    "equipment.rpg.give",
+    "events.smokesignal.calendar.eventConfiguration",
+    "place.stream.broadcast.origin",
+    "place.stream.chat.message",
+    "place.stream.chat.profile",
+    "place.stream.key",
+    "place.stream.livestream",
+    "site.standard.document",
+    "site.standard.publication"
+  ],
+  "handleIsCorrect": true
+}

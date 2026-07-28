@@ -1,0 +1,14 @@
+{
+  "records": [
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/actor.rpg.stats/self",
+      "cid": "bafyreid27xtogzslgzc3ymbjgnyrx3yykmfzfqesxt537hegmm6hmiajr4",
+      "value": {
+        "$type": "actor.rpg.stats",
+        "createdAt": "2026-06-11T15:56:06.884Z",
+        "updatedAt": "2026-06-11T15:56:06.884Z"
+      }
+    }
+  ],
+  "cursor": "self"
+}

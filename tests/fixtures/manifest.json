@@ -1,0 +1,239 @@
+{
+  "schema": "atproto-net-selfhost-aspire/fixtures/1",
+  "capturedUtc": "2026-07-28T16:20:57.1591468Z",
+  "source": {
+    "handle": "atproto.com",
+    "did": "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+    "pds": "https://enoki.us-east.host.bsky.network",
+    "signingKeyMultibase": "zQ3shunBKsXixLxKtC5qeSG9E4J5RkGN57im31pcTzbNQnm5w",
+    "relay": "wss://relay1.us-west.bsky.network/xrpc/com.atproto.sync.subscribeRepos"
+  },
+  "head": {
+    "commitCid": "bafyreiejm2vdo373somgfbgtpy5x6jhxufnv3nz7mzoyonlfsh4e26zqbq",
+    "rev": "3mrns72us7523"
+  },
+  "collections": [
+    "actor.rpg.stats",
+    "app.bsky.actor.profile",
+    "app.bsky.feed.generator",
+    "app.bsky.feed.like",
+    "app.bsky.feed.post",
+    "app.bsky.feed.postgate",
+    "app.bsky.feed.repost",
+    "app.bsky.feed.threadgate",
+    "app.bsky.graph.block",
+    "app.bsky.graph.follow",
+    "app.bsky.graph.list",
+    "app.bsky.graph.listitem",
+    "app.bsky.graph.starterpack",
+    "chat.bsky.actor.declaration",
+    "community.lexicon.calendar.event",
+    "community.lexicon.calendar.rsvp",
+    "equipment.rpg.give",
+    "events.smokesignal.calendar.eventConfiguration",
+    "place.stream.broadcast.origin",
+    "place.stream.chat.message",
+    "place.stream.chat.profile",
+    "place.stream.key",
+    "place.stream.livestream",
+    "site.standard.document",
+    "site.standard.publication"
+  ],
+  "sampleRecords": [
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/actor.rpg.stats/self",
+      "cid": "bafyreid27xtogzslgzc3ymbjgnyrx3yykmfzfqesxt537hegmm6hmiajr4",
+      "collection": "actor.rpg.stats"
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.actor.profile/self",
+      "cid": "bafyreicdwixhubhirckrrt7mqcoiq4u47b7quxlm24r547qcth4bc2ubq4",
+      "collection": "app.bsky.actor.profile"
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.generator/atproto-devs",
+      "cid": "bafyreigvcg6cxjzqxismjeaif6yg4qaldk7t2l24qluyh5wzllhko4xf4a",
+      "collection": "app.bsky.feed.generator"
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.generator/aaancxhvd5lxu",
+      "cid": "bafyreihyxi5j4zwi4mtuvowri725c7kpw67iglspte4ykxgew7z7ob2wou",
+      "collection": "app.bsky.feed.generator"
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.like/3mmcjqnsnuq2m",
+      "cid": "bafyreidbabqyuoujuwmousepsg7erprmwnz7q5t4atjx5636523dfhgln4",
+      "collection": "app.bsky.feed.like"
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.like/3mmcjqkraoq2m",
+      "cid": "bafyreie72qdvndaw3nvkrdbq5va3ncuphuijaehhx5n4zs5vdivdemyu3u",
+      "collection": "app.bsky.feed.like"
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.like/3mmcjpuog5f2s",
+      "cid": "bafyreihypnnogbr2ppwdslqp7y3iratucimxkitmaprglwt4pecoofhdpq",
+      "collection": "app.bsky.feed.like"
+    }
+  ],
+  "recordProofCar": "car/record-proof.actor_rpg_stats.self.car",
+  "repoCar": "car/repo.car",
+  "firehoseFrames": [
+    {
+      "file": "firehose/frame-000.bin",
+      "bytes": 6852
+    },
+    {
+      "file": "firehose/frame-001.bin",
+      "bytes": 3752
+    },
+    {
+      "file": "firehose/frame-002.bin",
+      "bytes": 5213
+    },
+    {
+      "file": "firehose/frame-003.bin",
+      "bytes": 3759
+    },
+    {
+      "file": "firehose/frame-004.bin",
+      "bytes": 4100
+    },
+    {
+      "file": "firehose/frame-005.bin",
+      "bytes": 5995
+    },
+    {
+      "file": "firehose/frame-006.bin",
+      "bytes": 6056
+    },
+    {
+      "file": "firehose/frame-007.bin",
+      "bytes": 4859
+    },
+    {
+      "file": "firehose/frame-008.bin",
+      "bytes": 5415
+    },
+    {
+      "file": "firehose/frame-009.bin",
+      "bytes": 5622
+    },
+    {
+      "file": "firehose/frame-010.bin",
+      "bytes": 5779
+    },
+    {
+      "file": "firehose/frame-011.bin",
+      "bytes": 6614
+    }
+  ],
+  "files": [
+    {
+      "file": "json/did-doc.json",
+      "bytes": 554,
+      "sha256": "b9fc944211d83612fb5062e047c6fbd43110bb4eecb9cb3552d7f9721373c271"
+    },
+    {
+      "file": "json/latest-commit.json",
+      "bytes": 100,
+      "sha256": "d528d4e30c8200f457bb23f473a6ff3cf19b3c3739879d0f1314160572304215"
+    },
+    {
+      "file": "json/describe-repo.json",
+      "bytes": 1661,
+      "sha256": "3dfa557bd8e903c45b9712e7ece849fda1f1af4ad043921f975b1ce594ac3be5"
+    },
+    {
+      "file": "json/listRecords.actor_rpg_stats.json",
+      "bytes": 363,
+      "sha256": "d2172f80588f2ccda0cd6f3387e48e39942153a512d317d04b9eb9e14d0ca2fb"
+    },
+    {
+      "file": "json/listRecords.app_bsky_actor_profile.json",
+      "bytes": 1012,
+      "sha256": "049c13f3a468116e47c22c29de0948486d5bdb282e7edb544b6ec093c935ffe4"
+    },
+    {
+      "file": "json/listRecords.app_bsky_feed_generator.json",
+      "bytes": 2357,
+      "sha256": "3d749816f5657658e66e5eda81c5ce271faae3f546b3c532c2672e6c5f0edf53"
+    },
+    {
+      "file": "json/listRecords.app_bsky_feed_like.json",
+      "bytes": 1505,
+      "sha256": "c5a2b07cf120fc0045853aca3cf3596e1e772baa26e217c7fe6c8d9e28703372"
+    },
+    {
+      "file": "car/record-proof.actor_rpg_stats.self.car",
+      "bytes": 2778,
+      "sha256": "130317c1678bb028b20875bc9cf0c4d56c50e5066e94026829b6b23f04780430"
+    },
+    {
+      "file": "car/repo.car",
+      "bytes": 720478,
+      "sha256": "927ef1f8489b671ba364942440b14670934cf903e8fa94529c2d12a5dc60a028"
+    },
+    {
+      "file": "firehose/frame-000.bin",
+      "bytes": 6852,
+      "sha256": "58491b6542901bf62f62a8b14e955a4726c7c86aa0ba90f8c9b1c1466198c31a"
+    },
+    {
+      "file": "firehose/frame-001.bin",
+      "bytes": 3752,
+      "sha256": "70beb299a43bf697aafdcfc01f78d3cebe31dae83bf566b23c6f304effb78327"
+    },
+    {
+      "file": "firehose/frame-002.bin",
+      "bytes": 5213,
+      "sha256": "08be38bde049457a388a36bcfb4eb8b9f6e566d6f14ef889d9b4ee902df7b953"
+    },
+    {
+      "file": "firehose/frame-003.bin",
+      "bytes": 3759,
+      "sha256": "ad4dac4bf5798e75a34dc98645fa6ccb1cc1487c8f44882a0c1628cf8d9aef3b"
+    },
+    {
+      "file": "firehose/frame-004.bin",
+      "bytes": 4100,
+      "sha256": "18c76afecb5c7d0110ece978af877be5b757a494c29140d71dc32e3bce5fe42d"
+    },
+    {
+      "file": "firehose/frame-005.bin",
+      "bytes": 5995,
+      "sha256": "b2a825552b328eee4765ff893075f075958cdefb16b40d6b3513c5a6821a5641"
+    },
+    {
+      "file": "firehose/frame-006.bin",
+      "bytes": 6056,
+      "sha256": "b53cc32b588c0b27112dec1ca0b97200c6d93542cc1ab4a8152abd233a10fac8"
+    },
+    {
+      "file": "firehose/frame-007.bin",
+      "bytes": 4859,
+      "sha256": "2881815eff986f1dbc87071f454cf7df79dd10e281e0c87e0b407141f5c927c0"
+    },
+    {
+      "file": "firehose/frame-008.bin",
+      "bytes": 5415,
+      "sha256": "604e6b2ae69884939fcad44c6e5dd6029cdd4468a595c853f703426dba212575"
+    },
+    {
+      "file": "firehose/frame-009.bin",
+      "bytes": 5622,
+      "sha256": "fd1be2d8108e1ac75aca581189f2238e0743d492b255ae6b1d129b63c7e455a6"
+    },
+    {
+      "file": "firehose/frame-010.bin",
+      "bytes": 5779,
+      "sha256": "b9fad297b7389c66d8e9a766d7041e287ac41314882553261d5a27402b8f7385"
+    },
+    {
+      "file": "firehose/frame-011.bin",
+      "bytes": 6614,
+      "sha256": "aa1342ba59c103e3226955f0c09a9dedd80587dafc38e9fee7c4ebd889780164"
+    }
+  ],
+  "notes": "Public data captured for codec conformance testing. Regenerate with: dotnet run --project tools/AtProto.Fixtures.Tool -- --out tests/fixtures"
+}

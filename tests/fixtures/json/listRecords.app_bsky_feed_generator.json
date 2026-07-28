@@ -1,0 +1,73 @@
+{
+  "records": [
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.generator/atproto-devs",
+      "cid": "bafyreigvcg6cxjzqxismjeaif6yg4qaldk7t2l24qluyh5wzllhko4xf4a",
+      "value": {
+        "did": "did:web:discover.bsky.app",
+        "$type": "app.bsky.feed.generator",
+        "avatar": {
+          "ref": {
+            "$link": "bafkreibr7yuki7ark6h6jvntb6qy3fo5zgvb5sdxl6xnfamjshnue5cvfm"
+          },
+          "size": 10714,
+          "$type": "blob",
+          "mimeType": "image/jpeg"
+        },
+        "createdAt": "2024-02-08T01:37:30.586Z",
+        "description": "Conversation about building on Bluesky APIs and the AT Protocol. Keywords include #atproto and #atdev.",
+        "displayName": "AT Protocol Developers"
+      }
+    },
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.generator/aaancxhvd5lxu",
+      "cid": "bafyreihyxi5j4zwi4mtuvowri725c7kpw67iglspte4ykxgew7z7ob2wou",
+      "value": {
+        "did": "did:web:skyfeed.me",
+        "$type": "app.bsky.feed.generator",
+        "avatar": {
+          "ref": {
+            "$link": "bafkreihwbmi627br43k6i2mwrxz5vynmdtt5awvpht7art3xhkt4hgjofy"
+          },
+          "size": 420,
+          "$type": "blob",
+          "mimeType": "image/png"
+        },
+        "createdAt": "2024-08-05T18:53:11.628Z",
+        "description": "Conversation about DWeb Camp 2024. Shows posts from the last 7 days. \n\n#DWebCamp",
+        "displayName": "DWeb Camp 2024",
+        "skyfeedBuilder": {
+          "blocks": [
+            {
+              "id": "aaachykf32v4k",
+              "type": "input",
+              "inputType": "firehose",
+              "firehoseSeconds": 604800
+            },
+            {
+              "id": "aaancxhvedt3g",
+              "type": "regex",
+              "value": "#DWebCamp",
+              "target": "text|alt_text|link",
+              "caseSensitive": false
+            },
+            {
+              "id": "aaachyasikouq",
+              "type": "regex",
+              "value": "Dweb",
+              "caseSensitive": false
+            },
+            {
+              "id": "aaancxhveasbs",
+              "type": "sort",
+              "sortType": "created_at"
+            }
+          ],
+          "license": "EUPL-1.2",
+          "displayName": "DWeb Camp 2024"
+        }
+      }
+    }
+  ],
+  "cursor": "aaancxhvd5lxu"
+}

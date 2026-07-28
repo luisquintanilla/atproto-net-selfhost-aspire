@@ -6,4 +6,10 @@
     <Project Path="src/aspire/AtProto.AppHost/AtProto.AppHost.csproj" />
     <Project Path="src/aspire/AtProto.ServiceDefaults/AtProto.ServiceDefaults.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AtProto.Fixtures.Tests/AtProto.Fixtures.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/AtProto.Fixtures.Tool/AtProto.Fixtures.Tool.csproj" />
+  </Folder>
 </Solution>

@@ -1,0 +1,30 @@
+{
+  "records": [
+    {
+      "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.actor.profile/self",
+      "cid": "bafyreicdwixhubhirckrrt7mqcoiq4u47b7quxlm24r547qcth4bc2ubq4",
+      "value": {
+        "$type": "app.bsky.actor.profile",
+        "avatar": {
+          "ref": {
+            "$link": "bafkreiaihtwfr2d6mjfb6drzaze2gubqtst4ymiwxowqfxpsqxpnz2t33u"
+          },
+          "size": 156824,
+          "$type": "blob",
+          "mimeType": "image/jpeg"
+        },
+        "banner": {
+          "ref": {
+            "$link": "bafkreidhox3lr7tld2oj2uy7swefvhsgcmeufurclzllwloceyhwjg6rg4"
+          },
+          "size": 57751,
+          "$type": "blob",
+          "mimeType": "image/jpeg"
+        },
+        "description": "Social networking technology created by Bluesky. \n\nDeveloper-focused account. Follow @bsky.app for general announcements!\n\nBluesky API docs: docs.bsky.app\nAT Protocol specs: atproto.com",
+        "displayName": "AT Protocol Developers"
+      }
+    }
+  ],
+  "cursor": "self"
+}
