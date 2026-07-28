@@ -22,7 +22,15 @@ public sealed class FirehoseBroadcaster
     private long _seq;
 
     /// <param name="backfillCapacity">Max frames retained for cursor replay.</param>
-    public FirehoseBroadcaster(int backfillCapacity = 4096) => _backfillCapacity = backfillCapacity;
+    /// <param name="initialSeq">
+    /// Seq to resume from (0 for a fresh stream). A Relay seeds this from its persisted global seq so
+    /// the sequence stays monotonic across restarts and downstream cursors remain valid.
+    /// </param>
+    public FirehoseBroadcaster(int backfillCapacity = 4096, long initialSeq = 0)
+    {
+        _backfillCapacity = backfillCapacity;
+        _seq = initialSeq;
+    }
 
     /// <summary>The highest seq assigned so far (0 before any event).</summary>
     public long CurrentSeq
@@ -41,15 +49,35 @@ public sealed class FirehoseBroadcaster
     public void Publish(SequencedFrame frame)
     {
         lock (_gate)
-        {
-            _backfill.Add(frame);
-            int overflow = _backfill.Count - _backfillCapacity;
-            if (overflow > 0)
-                _backfill.RemoveRange(0, overflow);
+            PublishLocked(frame);
+    }
 
-            foreach (Channel<SequencedFrame> channel in _subscribers.Values)
-                channel.Writer.TryWrite(frame);
+    /// <summary>
+    /// Atomically reserve the next seq, encode the frame with it, and publish — all under one lock.
+    /// This is the safe path when multiple producers publish concurrently (e.g. a Relay fanning in
+    /// several upstream hosts): seq assignment and backfill append stay strictly in order, so a
+    /// subscriber resuming from a cursor never sees a gap or an out-of-order frame. Returns the seq.
+    /// </summary>
+    public long PublishNext(Func<long, byte[]> encodeWithSeq)
+    {
+        ArgumentNullException.ThrowIfNull(encodeWithSeq);
+        lock (_gate)
+        {
+            long seq = ++_seq;
+            PublishLocked(new SequencedFrame(seq, encodeWithSeq(seq)));
+            return seq;
         }
+    }
+
+    private void PublishLocked(SequencedFrame frame)
+    {
+        _backfill.Add(frame);
+        int overflow = _backfill.Count - _backfillCapacity;
+        if (overflow > 0)
+            _backfill.RemoveRange(0, overflow);
+
+        foreach (Channel<SequencedFrame> channel in _subscribers.Values)
+            channel.Writer.TryWrite(frame);
     }
 
     /// <summary>

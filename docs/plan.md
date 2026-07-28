@@ -12,10 +12,10 @@ Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at 
 
 ## 0. Progress (live status — updated 2026-07-28)
 
-**Autopilot lane `M0 → T0 → M1 → M2 → M3` is COMPLETE and verified. The full self-hosted stack (our PDS →
-AppView presence board) runs end-to-end under `aspire run`, with a StatusSeeder writing live
-`place.selfhost.status` records that light up the board with decoded emoji. Next on autopilot: M4 (Relay) → M5
-(Aspire native integrations).**
+**Autopilot lane `M0 → T0 → M1 → M2 → M3 → M4` is COMPLETE and verified. The full three-tier self-hosted stack
+(our PDS → our Relay → AppView presence board) runs end-to-end under `aspire run`, with a StatusSeeder writing
+live `place.selfhost.status` records that flow PDS→Relay→AppView and light up the board with decoded emoji.
+Next on autopilot: M5 (Aspire native integrations).**
 
 | Phase | Status | Commit | Evidence |
 |-------|--------|--------|----------|
@@ -26,22 +26,25 @@ AppView presence board) runs end-to-end under `aspire run`, with a StatusSeeder 
 | **Orchestration** `aspire run` end-to-end | ✅ verified | `7a3f4d8` | dashboard (`:17046`, HTTP 302) + FirehoseProbe + AppView all up; AppView served live board (6358 users, ~71/s) through DCP-assigned ports. WSL dev-cert fix documented in README |
 | **M3 (gate)** MST **write** core | ✅ done | `f56b25d` | rebuilt MST root == reference `commit.data` **exactly** (`bafyrei…v6ubfi`); **462/462** node blocks byte-identical; canonical encoder round-trips **2133/2133** real blocks |
 | **M3** PDS writes: signing · CAR write · XRPC · firehose | ✅ done | `ce0d5a5`, `f4e4cf7`, `5aa01dc`, `4058ee6` | k256/p256 commit signing (verifies the real bsky sig); CARv1 writer byte-exact vs the 720478-byte export; `AtProto.Pds` XRPC + did:web; **Pds e2e 4/4** — an independent firehose client reads a signature-verifiable `#commit`, `getRepo` CARv1 validates |
-| **Capstone** self-hosted PDS → AppView loop under `aspire run` | ✅ verified | *(this change)* | AppView repointed at **our** PDS (`Firehose__Url`); `StatusSeeder` writes `place.selfhost.status`; board shows the **decoded emoji**, latest-wins per DID. **Live**: 6 users, getStats advancing (totalUpdates 76→78, lastSeq 88→90), board HTTP 200. New `SelfHostedLoopTests` drives the real ingest→Rx-projection in-process |
-| M4 relay · M5 Aspire integrations | ⚪ pending | — | autopilot after M3 |
+| **Capstone** self-hosted PDS → AppView loop under `aspire run` | ✅ verified | `62eac75` | AppView repointed at **our** PDS (`Firehose__Url`); `StatusSeeder` writes `place.selfhost.status`; board shows the **decoded emoji**, latest-wins per DID. **Live**: 6 users, getStats advancing (totalUpdates 76→78, lastSeq 88→90), board HTTP 200. New `SelfHostedLoopTests` drives the real ingest→Rx-projection in-process |
+| **M4** our own Relay (crawl · global seq · re-emit) | ✅ done | *(this change)* | `AtProto.Relay` crawls the upstream PDS, assigns a **global** seq via `FirehoseBroadcaster.PublishNext`, re-emits `subscribeRepos`; lenient validate (DID + rev-monotonic); `listHosts`/`getRepoStatus`/`getRepo`-redirect; per-host cursor + global-seq persisted across restart. **Live under `aspire run`**: PDS→**Relay**→AppView — relay `active` (lastUpstreamSeq 1510), AppView `lastSeq` tracks the relay's global seq, board 6 users w/ emoji, relay tracks per-repo rev. **Pds.Tests 7/7** incl. `RelayLoopTests` (full loop + restart-resume: no reset, no reprocess) |
+| M5 Aspire integrations | ⚪ pending | — | autopilot after M4 |
 | M6 stretch | ⚪ deferred | — | not in autopilot run |
 
-**Totals:** 60/60 tests green (Fixtures 5, Core 38, Firehose 5, AppView 7, Pds 5). Reactive layering held exactly
+**Totals:** 62/62 tests green (Fixtures 5, Core 38, Firehose 5, AppView 7, Pds 7). Reactive layering held exactly
 as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only.
 
-**M3 is complete and the capstone loop is live.** The self-hosted stack — our own **PDS** (did:web, MST write,
-k256/p256 commit signing, CARv1 write, `subscribeRepos` firehose) → **AppView** (Rx presence projection) — runs
-end-to-end under `aspire run`, with a `StatusSeeder` writing real `place.selfhost.status` records that light up
+**M4 is complete: the full three-tier stack is live.** Our own **PDS** (did:web, MST write, k256/p256 commit
+signing, CARv1 write, `subscribeRepos`) → our own **Relay** (crawls the PDS, assigns a global seq, re-emits an
+aggregated firehose, persists per-host + global cursors) → **AppView** (Rx presence projection) runs end-to-end
+under `aspire run`, with a `StatusSeeder` writing real `place.selfhost.status` records that flow all the way to
 the board with their decoded emoji (latest-wins per account). Proven three ways: the MST root-CID gate (462/462
 node blocks byte-identical to the reference), the PDS e2e suite (a `#commit` an independent consumer verifies),
-and a new in-process `SelfHostedLoopTests` that runs the actual AppView ingest against our PDS.
-**Next action:** **M4** (our own Relay — reuse `FirehoseBroadcaster`, subscribe the upstream PDS, assign a global
-seq, re-emit) then **M5** (Aspire "native" integrations — `AddAtprotoPds/Relay/AppView` + `.WithReference()`
-auto-wiring), both on autopilot.
+and `RelayLoopTests` (the actual AppView ingest against our Relay + a restart that resumes cursors with no reset
+and no reprocessing).
+**Next action:** **M5** (Aspire "native" integrations — a `AtProto.Hosting.Atproto` library exposing
+`AddAtprotoPds/Relay/AppView` + `.WithReference()` auto-wiring so the AppHost collapses to a short declarative
+chain), on autopilot.
 
 ---
 
@@ -295,16 +298,21 @@ AtProto.AppView ──subscribeRepos(relay)──▶ Rx.NET v7 projection ──
 - **Accept:** create account + write status via `StatusWeb` → PDS emits a valid, signature-verifiable
   `#commit` firehose that an independent consumer can read; `getRepo` returns a valid CARv1.
 
-### M4 — Our own Relay  🟢 *(autopilot after M3)*
+### M4 — Our own Relay  ✅ *(done — verified live under `aspire run`)*
 - `AtProto.Relay` ASP.NET: accept `requestCrawl`; subscribe upstream PDS firehose(s) with per-host cursor
-  persistence + redialer; validate (lenient: DID match + rev monotonic + signature; MST inversion later);
-  assign **global monotonic seq**; re-emit `subscribeRepos` via the `AtProto.Firehose` broadcaster;
-  `getRepoStatus`, `listHosts`, `getRepo` **redirect** to source PDS. Postgres host/cursor state.
-- Repoint the AppView to consume **our** relay (via Aspire service discovery).
-- **Accept:** full **PDS → Relay → AppView** runs in-process under `aspire run`; a status write flows PDS→relay→
-  appview→presence board; relay restart resumes per-host cursors with no gaps/dupes.
+  persistence + redialer; validate (lenient: DID match + rev monotonic; **signature + MST inversion deferred to
+  M6/strict — see the `// TODO M6` in `RelayService`**); assign **global monotonic seq**; re-emit `subscribeRepos`
+  via the `AtProto.Firehose` broadcaster; `getRepoStatus`, `listHosts`, `getRepo` **redirect** to source PDS.
+  Cursor state persisted to files (`relay-cursors/`: per-host upstream seq + a global seq seeded into the
+  broadcaster on restart so downstream cursors stay valid). *(Postgres host/cursor state deferred; files suffice
+  for the MVP.)*
+- Repoint the AppView to consume **our** relay (via Aspire service discovery — AppHost `Firehose__Url` → relay).
+- **Accept (met):** full **PDS → Relay → AppView** runs under `aspire run` (relay `active`, AppView `lastSeq`
+  tracks the relay's global seq, board populated with emoji); `RelayLoopTests` proves a status write flows
+  PDS→relay→appview→board **and** a relay restart resumes the per-host cursor + global seq with no reset and no
+  reprocessing.
 
-### M5 — Aspire orchestration + custom "native" integrations  🟢 *(autopilot after M3)*
+### M5 — Aspire orchestration + custom "native" integrations  🟢 *(autopilot after M4 — NEXT)*
 - `AtProto.AppHost` wires pds + relay + appview + postgres [+ redis] with service discovery / health / OTel;
   appview firehose URL and pds `requestCrawl` target resolved via discovery.
 - `AtProto.Hosting.Atproto`: `builder.AddAtprotoPds(name)`, `.AddAtprotoRelay(name)`, `.AddAtprotoAppView(name)`

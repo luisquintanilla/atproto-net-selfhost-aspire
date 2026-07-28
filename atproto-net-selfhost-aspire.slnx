@@ -20,6 +20,7 @@
   <Folder Name="/src/services/">
     <Project Path="src/services/AtProto.AppView/AtProto.AppView.csproj" />
     <Project Path="src/services/AtProto.Pds/AtProto.Pds.csproj" />
+    <Project Path="src/services/AtProto.Relay/AtProto.Relay.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AtProto.Fixtures.Tests/AtProto.Fixtures.Tests.csproj" />

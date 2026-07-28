@@ -7,7 +7,8 @@ core services - **PDS**, **Relay**, and **AppView** - and wires them together wi
 The end goal: each service becomes a reusable **component** you plug in as a native Aspire
 integration (`builder.AddAtprotoPds()`, `.AddAtprotoRelay()`, `.AddAtprotoAppView()`).
 
-> Status: early. Milestone **M0** (repo + Aspire skeleton) is in place. See the roadmap below.
+> Status: early. Milestones **M0–M4** are in place — the full self-hosted **PDS → Relay → AppView**
+> stack runs under `aspire run`. See the roadmap below.
 
 ## Why this exists
 
@@ -71,13 +72,16 @@ aspire run --project src/aspire/AtProto.AppHost
 ```
 
 `aspire run` boots the Aspire dashboard (watch the console for the
-`https://localhost:17046/login?t=…` URL) and the full **self-hosted loop**: our own **PDS**
-(`did:web`), the **AppView** presence board subscribed to that PDS's firehose, a **StatusSeeder**
-that registers a handful of demo accounts and writes live `place.selfhost.status` records, and the
-**FirehoseProbe**. Within seconds the board fills with self-authored data flowing
-**PDS → firehose → AppView** — open the `appview` resource from the dashboard, or hit
-`/xrpc/place.selfhost.getPresence` / `getStats` on its assigned port. Each row shows the account
-DID and its latest **emoji**, decoded from the commit's CAR slice (latest-wins per account).
+`https://localhost:17046/login?t=…` URL) and the full three-tier **self-hosted loop**: our own
+**PDS** (`did:web`), our own **Relay** (crawls the PDS firehose, assigns a global sequence, and
+re-emits an aggregated `subscribeRepos`), the **AppView** presence board subscribed to the *relay*,
+a **StatusSeeder** that registers a handful of demo accounts and writes live
+`place.selfhost.status` records, and the **FirehoseProbe**. Within seconds the board fills with
+self-authored data flowing **PDS → Relay → AppView** — open the `appview` resource from the
+dashboard, or hit `/xrpc/place.selfhost.getPresence` / `getStats` on its assigned port. Each row
+shows the account DID and its latest **emoji**, decoded from the commit's CAR slice (latest-wins
+per account). The relay's own surface is live too: `/xrpc/com.atproto.sync.listHosts` and
+`getRepoStatus?did=…` on the `relay` port.
 
 > **WSL: use the all-HTTP launch profile.** The Aspire dashboard binds HTTPS by default, which can
 > fail to bind under WSL even with a valid dev cert (`aspire run` aborts with a
@@ -88,7 +92,7 @@ DID and its latest **emoji**, decoded from the commit's CAR slice (latest-wins p
 >   dotnet run --project src/aspire/AtProto.AppHost/AtProto.AppHost.csproj --launch-profile http
 > ```
 > The dashboard then comes up on `http://localhost:15194`; service ports are proxied by DCP
-> (e.g. PDS on `:5271`, AppView on `:5193`).
+> (e.g. PDS on `:5271`, Relay on `:5333`, AppView on `:5193`).
 
 To run just the board without the dashboard: `dotnet run --project src/services/AtProto.AppView`
 (→ http://localhost:5193). By default it points at the **public** Bluesky relay (set
@@ -103,7 +107,7 @@ The build is phased. Each milestone is independently demoable.
 - **M1** - reactive firehose core, validated live against the public Bluesky relay *(done)*
 - **M2** - AppView "presence board" over the public firehose (emoji status, latest-wins) *(done)*
 - **M3** - our own PDS (`did:web`), MST build + commit signing + CAR write *(done — self-hosted PDS → AppView loop runs under `aspire run`)*
-- **M4** - our own Relay (aggregate PDS firehoses, global sequence)
+- **M4** - our own Relay (aggregate PDS firehoses, global sequence) *(done — full **PDS → Relay → AppView** loop runs under `aspire run`)*
 - **M5** - Aspire orchestration + custom "native" integrations
 - **M6** - stretch: federation discovery, did:plc, OAuth, packaging
 

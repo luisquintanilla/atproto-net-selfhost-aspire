@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\apps\AtProto.StatusSeeder\AtProto.StatusSeeder.csproj" />
     <ProjectReference Include="..\..\services\AtProto.AppView\AtProto.AppView.csproj" />
     <ProjectReference Include="..\..\services\AtProto.Pds\AtProto.Pds.csproj" />
+    <ProjectReference Include="..\..\services\AtProto.Relay\AtProto.Relay.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
