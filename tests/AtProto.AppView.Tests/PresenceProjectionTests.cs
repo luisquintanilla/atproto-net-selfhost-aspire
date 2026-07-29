@@ -46,4 +46,34 @@ public class PresenceProjectionTests
 
         Assert.Equal(1, store.Get("did:web:alice")!.Seq);
     }
+
+    [Fact]
+    public void Changes_publishes_one_delta_per_update_carrying_the_latest_entry()
+    {
+        var store = new PresenceStore();
+        using var projection = new PresenceProjection(store);
+        var source = new Subject<StatusUpdate>();
+        var seen = new List<PresenceChange>();
+
+        // Subscribe to the live feed before connecting so no delta is missed (hot Subject).
+        using IDisposable feed = projection.Changes.Subscribe(seen.Add);
+        using IDisposable pipeline = projection.Connect(source);
+
+        source.OnNext(Update("did:web:alice", 1));
+        source.OnNext(Update("did:web:alice", 3)); // latest-wins: newer seq carried through
+        source.OnNext(Update("did:web:alice", 4, RepoOpAction.Delete));
+
+        Assert.Equal(3, seen.Count);
+
+        Assert.False(seen[0].Removed);
+        Assert.Equal(1, seen[0].Entry!.Seq);
+
+        Assert.False(seen[1].Removed);
+        Assert.Equal(3, seen[1].Entry!.Seq);
+
+        Assert.True(seen[2].Removed);
+        Assert.Null(seen[2].Entry);
+        Assert.Equal("did:web:alice", seen[2].Did);
+        Assert.Equal(0, store.UniqueUsers); // delete removed the only account
+    }
 }

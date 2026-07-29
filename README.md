@@ -9,8 +9,9 @@ integration (`builder.AddAtprotoPds()`, `.AddAtprotoRelay()`, `.AddAtprotoAppVie
 AppHost already does today.
 
 > Status: the full self-hosted **PDS → Relay → AppView** stack runs under `aspire run`, declared
-> through the "native" `AtProto.Hosting.Atproto` integration. Milestones **M0–M5** are done; **M6**
-> (federation, did:plc, OAuth, packaging) is the remaining stretch. See the roadmap below.
+> through the "native" `AtProto.Hosting.Atproto` integration, and the presence board updates **live
+> over SignalR** (the Rx projection pushed straight to the browser). Milestones **M0–M5** are done;
+> **M6** (federation, did:plc, OAuth, packaging) is the remaining stretch. See the roadmap below.
 
 ## Why this exists
 
@@ -30,7 +31,10 @@ That maps cleanly onto reactive dataflow in .NET, so the design uses:
 - **Seam = the BCL `IObservable<T>` interface.** The firehose library hands back
   `IObservable<RepoEvent>` via a tiny adapter and takes **no `System.Reactive` dependency**.
 - **Projection = push.** Only the AppView (and samples) reference **Rx.NET v7** for
-  `GroupBy`/`Replay(1)`/`Buffer`/`Throttle` read-model algebra.
+  `GroupBy`/`Replay(1)`/`Buffer`/`Throttle` read-model algebra — and that push now reaches the
+  browser: a `PresenceBroadcaster` forwards the projection's live `Changes` + `Stats` over
+  **SignalR** to the presence board, so the board updates from server-driven deltas (no polling).
+  The full chain is `firehose IObservable → Rx projection → IObserver → SignalR → browser`.
 
 ## Layout
 

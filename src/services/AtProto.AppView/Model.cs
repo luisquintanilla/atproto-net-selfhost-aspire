@@ -29,3 +29,17 @@ public sealed record BoardStats(
     double UpdatesPerSecond,
     long LastSeq,
     DateTimeOffset At);
+
+/// <summary>
+/// A single applied change to the presence read-model, published live on
+/// <see cref="PresenceProjection.Changes"/> and forwarded to connected boards by the broadcaster.
+/// <see cref="Entry"/> is the resulting latest-wins entry for the account, or <c>null</c> when the
+/// change was a delete (see <see cref="Removed"/>). This is the <c>GroupBy(did)</c>→latest
+/// projection surfaced as an incremental event feed.
+/// </summary>
+public sealed record PresenceChange(
+    string Did,
+    PresenceEntry? Entry,
+    bool Removed,
+    long Seq,
+    DateTimeOffset UpdatedAt);

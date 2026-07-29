@@ -31,10 +31,11 @@ Remaining: M6 (stretch — federation discovery, did:plc, OAuth, packaging).**
 | **Capstone** self-hosted PDS → AppView loop under `aspire run` | ✅ verified | `62eac75` | AppView repointed at **our** PDS (`Firehose__Url`); `StatusSeeder` writes `place.selfhost.status`; board shows the **decoded emoji**, latest-wins per DID. **Live**: 6 users, getStats advancing (totalUpdates 76→78, lastSeq 88→90), board HTTP 200. New `SelfHostedLoopTests` drives the real ingest→Rx-projection in-process |
 | **M4** our own Relay (crawl · global seq · re-emit) | ✅ done | `89d7fba` | `AtProto.Relay` crawls the upstream PDS, assigns a **global** seq via `FirehoseBroadcaster.PublishNext`, re-emits `subscribeRepos`; lenient validate (DID + rev-monotonic); `listHosts`/`getRepoStatus`/`getRepo`-redirect; per-host cursor + global-seq persisted across restart. **Live under `aspire run`**: PDS→**Relay**→AppView — relay `active` (lastUpstreamSeq 1510), AppView `lastSeq` tracks the relay's global seq, board 6 users w/ emoji, relay tracks per-repo rev. **Pds.Tests 7/7** incl. `RelayLoopTests` (full loop + restart-resume: no reset, no reprocess) |
 | **M5** Aspire "native" integrations | ✅ done | *(this change)* | `AtProto.Hosting.Atproto`: `AddAtprotoPds/Relay/AppView<TProject>` + `WithUpstream`/`WithFirehose`/`WithCollection` encode the env-var wiring contract so the AppHost collapses to a **declarative chain** (relay auto-crawls the pds, appview auto-subscribes the relay). Referenced with `IsAspireProjectResource="false"` (a hosting lib, not a service). **Live under `aspire run`** via the refactored AppHost: same working PDS→Relay→AppView board (6 users, emoji, global seq persisted *across* runs). **Hosting.Tests 1/1** asserts the topology (wait-ordering + `Pds__PublicUrl`/`Relay__Upstreams__0`/`Firehose__Url`/`AppView__Collection`) |
-| M6 stretch | ⚪ deferred | — | not in autopilot run |
+| M6 stretch | ⚪ deferred | — | live reactive UI (SignalR) landed ✅ (see below); rest not in autopilot run |
 
-**Totals:** 63/63 tests green (Fixtures 5, Core 38, Firehose 5, AppView 7, Pds 7, Hosting 1). Reactive layering
-held exactly as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only.
+**Totals:** 64/64 tests green (Fixtures 5, Core 38, Firehose 5, AppView 8, Pds 7, Hosting 1). Reactive layering
+held exactly as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only — and now
+pushed all the way to the browser (see the live-UI note).
 
 **M5 is complete: the whole self-hosted stack is now a "native" Aspire integration.** Our own **PDS** (did:web,
 MST write, k256/p256 commit signing, CARv1 write, `subscribeRepos`) → our own **Relay** (crawls the PDS, assigns
@@ -47,7 +48,18 @@ root-CID gate (462/462 node blocks byte-identical to the reference), the PDS e2e
 independent consumer verifies), `RelayLoopTests` (the actual AppView ingest against our Relay + a restart that
 resumes cursors with no reset and no reprocessing), and `Hosting.Tests` (the integration wires the exact env-var
 contract + startup ordering) — plus a live `aspire run` of the refactored AppHost.
-**Next action:** the autopilot lane is done through M5. Optional **M6** (stretch — federation discovery via a
+
+**Live reactive UI (M6 polish — done):** the AppView now closes the reactive spine to the browser. The Rx
+projection publishes a per-entry `Changes` feed (the `GroupBy(did)`→latest read model surfaced as events) and its
+`Buffer(1s)` `Stats`; a `PresenceBroadcaster` (`IHostedService`) subscribes to both and fans them out over
+**SignalR** (`PresenceHub` at `/hub/presence`) — `presence` deltas (coalesced ≤4/s) + `stats`. The board page
+(`wwwroot/index.html`, vendored `@microsoft/signalr`) seeds from `getPresence`, then applies live deltas with a
+per-row flash — no polling. So the full chain is now `firehose IObservable → Rx projection → IObserver
+(broadcaster) → SignalR → browser`. **Verified live** under `aspire run`: a real WebSocket SignalR client received
+8 `stats` + 8 `presence` deltas driven by actual seeder writes (🧠/📚/🌤, decoded emoji, monotonic seq
+2068→2069→2070). Test: `PresenceProjectionTests.Changes_publishes_one_delta_per_update…` (AppView 8/8).
+**Next action:** the autopilot lane is done through M5, plus the live reactive UI. Optional **M6** (stretch —
+federation discovery via a
 service-advertisement record + `requestCrawl` announce, did:plc, OAuth AS, Relay strict MST inversion, NuGet
 packaging of the core libs + the Aspire integration).
 
@@ -226,7 +238,9 @@ PROJECTION  (Rx.NET v7, opt-in; AppView & live UI):
      .GroupBy(op.did).Select(g => g.Replay(1))     ── latest-status-per-user
      .Buffer(1s, 100) / CombineLatest              ── windowed top-N, live views
      ─▶ materialized read-model ─▶ /xrpc/<nsid>.getPresence ─▶ presence UI
-  on reconnect: pass ?cursor=lastSeq
+     └▶ Changes (per-entry) + Stats (Buffer 1s) ─▶ PresenceBroadcaster (IObserver)
+            ─▶ SignalR /hub/presence ─▶ browser (live deltas, no polling)   ← spine closed to the client
+  on reconnect: pass ?cursor=lastSeq  (server) / re-seed getPresence (browser)
 ```
 `AtProto.Firehose` exposes both a **client** (consume upstream) and a **server broadcaster** (re-emit with
 CBOR framing + seq + backfill window) reused by both PDS and Relay. Its core uses **only BCL primitives** and
