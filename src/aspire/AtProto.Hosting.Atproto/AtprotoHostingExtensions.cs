@@ -78,4 +78,18 @@ public static class AtprotoHostingExtensions
     public static IResourceBuilder<ProjectResource> WithCollection(
         this IResourceBuilder<ProjectResource> appview, string nsid)
         => appview.WithEnvironment("AppView__Collection", nsid);
+
+    /// <summary>
+    /// Give an AppView a PDS to read from and write to for inspection + compose (<c>AppView:PdsUrl</c>).
+    /// The firehose tells the AppView <em>what</em> changed; this tells it <em>where</em> to fetch the
+    /// full records, resolve identities, and (for the demo compose flow) write "your" status. Wires
+    /// service discovery + a startup dependency so the PDS is reachable before the AppView reads it.
+    /// </summary>
+    public static IResourceBuilder<ProjectResource> WithPds(
+        this IResourceBuilder<ProjectResource> appview,
+        IResourceBuilder<ProjectResource> pds)
+        => appview
+            .WithReference(pds)
+            .WaitFor(pds)
+            .WithEnvironment("AppView__PdsUrl", pds.GetEndpoint("http"));
 }

@@ -3,48 +3,183 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>atproto self-host — presence board</title>
+  <title>atproto self-host — explorer</title>
   <style>
-    body { font: 14px system-ui, sans-serif; margin: 2rem; color: #111; }
-    h1 { font-size: 1.2rem; margin-bottom: .2rem; }
-    h1 small { color: #888; font-weight: 400; }
-    .bar { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem; }
-    .stats { color: #555; }
-    #live { font-size: 12px; font-weight: 600; }
-    #live.on { color: #0a7d28; }
-    #live.off { color: #b00; }
-    table { border-collapse: collapse; width: 100%; max-width: 900px; }
-    th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #eee; font-variant-numeric: tabular-nums; }
-    th { color: #888; font-weight: 600; }
+    :root {
+      --bg: #0f1220; --panel: #171a2b; --panel2: #1e2238; --line: #2a2f4a;
+      --text: #e7e9f3; --muted: #9aa0bd; --accent: #7aa2ff; --good: #4ec97a;
+      --warn: #e0b341; --bad: # e06c75; --flash: #33407a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font: 14px system-ui, -apple-system, Segoe UI, sans-serif; margin: 0;
+      background: var(--bg); color: var(--text);
+    }
+    a { color: var(--accent); }
+    header {
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+      display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.05rem; margin: 0; font-weight: 650; }
+    header h1 small { color: var(--muted); font-weight: 400; font-size: .8rem; }
+    #live { font-size: 12px; font-weight: 700; margin-left: auto; }
+    #live.on { color: var(--good); }
+    #live.off { color: #e06c75; }
+    .stats { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+    .compose {
+      padding: .9rem 1.25rem; border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .compose .label { color: var(--muted); font-size: 12px; margin-bottom: .5rem; }
+    .compose .label b { color: var(--text); }
+    .emoji { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+    .emoji button {
+      font-size: 20px; line-height: 1; padding: .35rem .5rem; cursor: pointer;
+      background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; color: var(--text);
+      transition: transform .06s ease, border-color .15s ease;
+    }
+    .emoji button:hover { transform: translateY(-1px); border-color: var(--accent); }
+    .emoji button:disabled { opacity: .5; cursor: default; transform: none; }
+    #composeResult { margin-top: .55rem; font-size: 12px; color: var(--muted); min-height: 1.1em; word-break: break-all; }
+    #composeResult code { color: var(--good); }
+
+    main { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0; min-height: 60vh; }
+    @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+    section { padding: 1rem 1.25rem; }
+    section.board { border-right: 1px solid var(--line); }
+    section h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .6rem; }
+
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover td { background: var(--panel2); }
     td.status { font-size: 20px; }
-    code { font-size: 12px; color: #444; }
-    tr.flash td { animation: flash 1.1s ease-out; }
-    @keyframes flash { from { background: #fff6c2; } to { background: transparent; } }
+    td .did { font-size: 12px; color: var(--text); }
+    td .sub { font-size: 11px; color: var(--muted); }
+    tr.flash td { animation: flash 1.2s ease-out; }
+    tr.you td:first-child::before { content: "you"; color: var(--warn); font-size: 10px; font-weight: 700; margin-right: 4px; }
+    @keyframes flash { from { background: var(--flash); } to { background: transparent; } }
+
+    /* Firehose ticker */
+    .ticker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .ticker .row { padding: 3px 0; border-bottom: 1px dotted var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ticker .seq { color: var(--muted); }
+    .op { padding: 0 4px; border-radius: 4px; }
+    .op.create { color: var(--good); }
+    .op.update { color: var(--accent); }
+    .op.delete { color: #e06c75; }
+
+    /* Inspector drawer */
+    .drawer {
+      position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 94vw);
+      background: var(--panel); border-left: 1px solid var(--line);
+      transform: translateX(100%); transition: transform .18s ease; overflow-y: auto;
+      box-shadow: -12px 0 40px rgba(0,0,0,.4); z-index: 20;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer .head { position: sticky; top: 0; background: var(--panel); padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: .6rem; }
+    .drawer .head h2 { margin: 0; font-size: .95rem; }
+    .drawer .head button { margin-left: auto; background: none; border: 1px solid var(--line); color: var(--text); border-radius: 6px; cursor: pointer; padding: .3rem .55rem; }
+    .drawer .body { padding: 1rem 1.25rem; }
+    .kv { display: grid; grid-template-columns: 92px 1fr; gap: .3rem .7rem; margin-bottom: .9rem; }
+    .kv dt { color: var(--muted); font-size: 12px; }
+    .kv dd { margin: 0; font-size: 12px; word-break: break-all; }
+    .aturi { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: .4rem .55rem; font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+    .aturi .who { color: var(--warn); } .aturi .what { color: var(--accent); } .aturi .which { color: var(--good); }
+    pre.json {
+      background: #0c0f1c; border: 1px solid var(--line); border-radius: 8px; padding: .75rem;
+      overflow-x: auto; font-size: 12px; line-height: 1.45; color: #cdd3f0; margin: .3rem 0 1rem;
+    }
+    .json .k { color: #7aa2ff; } .json .s { color: #4ec97a; } .json .n { color: #e0b341; } .json .b { color: #c678dd; }
+    .reclist { display: flex; flex-direction: column; gap: .5rem; }
+    .rec { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; background: var(--panel2); }
+    .rec .rk { font-size: 12px; color: var(--muted); margin-bottom: .3rem; }
+    .muted { color: var(--muted); }
+    .sectlabel { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 1rem 0 .4rem; }
+    .btnrow { display: flex; gap: .5rem; margin-top: .5rem; }
+    .btnrow a { text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: .35rem .6rem; font-size: 12px; }
+    .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 10; }
+    .backdrop.open { opacity: 1; pointer-events: auto; }
   </style>
 </head>
 <body>
-  <h1>presence board <small>(self-hosted atproto AppView · live over SignalR)</small></h1>
-  <div class="bar">
-    <span id="live" class="off">○ connecting…</span>
+  <header>
+    <h1>atproto explorer <small>· self-hosted PDS → Relay → AppView, live</small></h1>
     <span class="stats" id="stats">—</span>
+    <span id="live" class="off">○ connecting…</span>
+  </header>
+
+  <div class="compose">
+    <div class="label">Post <b>your</b> status — it is written as a real record to the PDS, then flows back through the firehose and lights up the board.</div>
+    <div class="emoji" id="emoji"></div>
+    <div id="composeResult"></div>
   </div>
-  <table>
-    <thead><tr><th>#</th><th>status</th><th>did</th><th>rkey</th><th>seq</th><th>updated</th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
+
+  <main>
+    <section class="board">
+      <h2>Presence board <span class="muted" style="text-transform:none;letter-spacing:0">· click a row to inspect the real record</span></h2>
+      <table>
+        <thead><tr><th>#</th><th>status</th><th>account</th><th>seq</th><th>updated</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+    <section class="firehose">
+      <h2>Firehose <span class="muted" style="text-transform:none;letter-spacing:0">· raw #commit events off the wire</span></h2>
+      <div class="ticker" id="ticker"></div>
+    </section>
+  </main>
+
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="head"><h2 id="drawerTitle">Record</h2><button id="drawerClose">close</button></div>
+    <div class="body" id="drawerBody"></div>
+  </aside>
 
   <script src="/lib/signalr/signalr.min.js"></script>
   <script>
     const LIMIT = 25;
-    const board = new Map(); // did -> { did, rkey, cid, status, seq, updatedAt }
+    const COLLECTION = 'place.selfhost.status';
+    const EMOJI = ['🌤','💻','📚','🎧','☕','🏃','🌙','🍕','🎮','🔥','🌈','😴'];
+    const board = new Map();      // did -> entry
+    let youDid = null;            // set after a successful compose
 
+    // ---- helpers ----
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+    // A path-based did:web (did:web:host:pds:id) reads best as its trailing id.
+    function shortDid(did) {
+      const parts = String(did).split(':');
+      return parts.length > 3 ? parts[parts.length - 1] : did;
+    }
+    function syntaxHighlight(obj) {
+      const json = esc(JSON.stringify(obj, null, 2));
+      return json.replace(/("(\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?/g, m => {
+        let cls = 'n';
+        if (/^"/.test(m)) cls = /:$/.test(m) ? 'k' : 's';
+        else if (/true|false|null/.test(m)) cls = 'b';
+        return `<span class="${cls}">${m}</span>`;
+      });
+    }
+    function atUri(did, collection, rkey) {
+      return `at://<span class="who">${esc(did)}</span>/<span class="what">${esc(collection)}</span>/<span class="which">${esc(rkey)}</span>`;
+    }
+
+    // ---- board ----
     function render(changed) {
       const rows = [...board.values()].sort((a, b) => b.seq - a.seq).slice(0, LIMIT);
-      document.getElementById('rows').innerHTML = rows.map((e, i) =>
-        `<tr class="${changed && changed.has(e.did) ? 'flash' : ''}">` +
-        `<td>${i + 1}</td><td class="status">${e.status ?? ''}</td>` +
-        `<td><code>${e.did}</code></td><td><code>${e.rkey ?? ''}</code></td>` +
-        `<td>${e.seq}</td><td>${new Date(e.updatedAt).toLocaleTimeString()}</td></tr>`).join('');
+      $('rows').innerHTML = rows.map((e, i) => {
+        const flash = changed && changed.has(e.did) ? 'flash' : '';
+        const you = e.did === youDid ? 'you' : '';
+        return `<tr class="${flash} ${you}" data-did="${esc(e.did)}">` +
+          `<td>${i + 1}</td>` +
+          `<td class="status">${esc(e.status) || '·'}</td>` +
+          `<td><div class="did">${esc(shortDid(e.did))}</div><div class="sub">${esc(e.did)}</div></td>` +
+          `<td>${e.seq}</td>` +
+          `<td>${new Date(e.updatedAt).toLocaleTimeString()}</td></tr>`;
+      }).join('');
     }
 
     async function seed() {
@@ -65,16 +200,119 @@
     }
 
     function setStats(s) {
-      document.getElementById('stats').textContent =
-        `${s.uniqueUsers} users · ${s.totalUpdates} updates · ${s.updatesPerSecond}/s · seq ${s.lastSeq}`;
+      $('stats').textContent =
+        `${s.uniqueUsers} accounts · ${s.totalUpdates} updates · ${s.updatesPerSecond}/s · seq ${s.lastSeq}`;
     }
-
     function setLive(on) {
-      const el = document.getElementById('live');
+      const el = $('live');
       el.textContent = on ? '● live' : '○ offline';
       el.className = on ? 'on' : 'off';
     }
 
+    // ---- firehose ticker ----
+    function pushCommits(commits) {
+      const t = $('ticker');
+      for (const c of commits) {
+        const ops = (c.ops || []).map(o =>
+          `<span class="op ${esc(o.action)}">${esc(o.action)}</span> ${esc(o.collection)}/${esc(o.rkey)}`).join('  ');
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.innerHTML = `<span class="seq">#${c.seq}</span> ${esc(shortDid(c.did))} ${ops || '<span class="muted">(no ops)</span>'}`;
+        t.prepend(div);
+      }
+      while (t.children.length > 40) t.removeChild(t.lastChild);
+    }
+
+    // ---- compose ----
+    function buildEmoji() {
+      $('emoji').innerHTML = EMOJI.map(e => `<button data-emoji="${e}">${e}</button>`).join('');
+      $('emoji').querySelectorAll('button').forEach(b =>
+        b.addEventListener('click', () => compose(b.dataset.emoji)));
+    }
+    async function compose(status) {
+      const buttons = $('emoji').querySelectorAll('button');
+      buttons.forEach(b => b.disabled = true);
+      $('composeResult').textContent = `writing ${status} to the PDS…`;
+      try {
+        const res = await fetch('/compose', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        if (res.status === 503) { $('composeResult').innerHTML = '<span class="muted">compose is disabled — no PDS configured for this AppView.</span>'; return; }
+        if (!res.ok) { $('composeResult').innerHTML = `<span class="muted">compose failed (${res.status}).</span>`; return; }
+        const j = await res.json();
+        youDid = j.did;
+        $('composeResult').innerHTML =
+          `wrote <b>${esc(j.status)}</b> as <b>${esc(j.handle)}</b> → <code>${esc(j.uri)}</code> · watch the board`;
+      } catch (e) {
+        $('composeResult').innerHTML = `<span class="muted">compose error: ${esc(e.message)}</span>`;
+      } finally {
+        buttons.forEach(b => b.disabled = false);
+      }
+    }
+
+    // ---- inspector drawer ----
+    function openDrawer() { $('drawer').classList.add('open'); $('drawer').setAttribute('aria-hidden','false'); $('backdrop').classList.add('open'); }
+    function closeDrawer() { $('drawer').classList.remove('open'); $('drawer').setAttribute('aria-hidden','true'); $('backdrop').classList.remove('open'); }
+    $('drawerClose').addEventListener('click', closeDrawer);
+    $('backdrop').addEventListener('click', closeDrawer);
+
+    $('rows').addEventListener('click', ev => {
+      const tr = ev.target.closest('tr[data-did]');
+      if (tr) inspect(tr.dataset.did);
+    });
+
+    async function inspect(did) {
+      $('drawerTitle').textContent = shortDid(did);
+      $('drawerBody').innerHTML = '<p class="muted">resolving DID → PDS and fetching the repo…</p>';
+      openDrawer();
+      try {
+        const r = await fetch('/inspect/repo?did=' + encodeURIComponent(did));
+        if (r.status === 503) { $('drawerBody').innerHTML = '<p class="muted">Inspection is disabled — no PDS configured for this AppView.</p>'; return; }
+        if (!r.ok) { $('drawerBody').innerHTML = `<p class="muted">inspect failed (${r.status}).</p>`; return; }
+        const repo = await r.json();
+        renderRepo(did, repo);
+      } catch (e) {
+        $('drawerBody').innerHTML = `<p class="muted">inspect error: ${esc(e.message)}</p>`;
+      }
+    }
+
+    function renderRepo(did, repo) {
+      const doc = repo.didDoc;
+      const records = repo.records || [];
+      const idBlock = `
+        <div class="sectlabel">Identity</div>
+        <dl class="kv">
+          <dt>DID</dt><dd>${esc(repo.did)}</dd>
+          <dt>handle</dt><dd>${esc(repo.handle) || '<span class="muted">—</span>'}</dd>
+          <dt>PDS</dt><dd>${esc(repo.pds)}</dd>
+          ${doc ? `<dt>signing key</dt><dd>${esc(doc.signingKey) || '<span class="muted">—</span>'}</dd>` : ''}
+        </dl>`;
+      const commitBlock = repo.commit ? `
+        <div class="sectlabel">Latest commit</div>
+        <dl class="kv">
+          <dt>commit CID</dt><dd>${esc(repo.commit.cid) || '<span class="muted">—</span>'}</dd>
+          <dt>rev</dt><dd>${esc(repo.commit.rev) || '<span class="muted">—</span>'}</dd>
+        </dl>` : '';
+      const recBlock = records.length ? `
+        <div class="sectlabel">Records in ${esc(repo.collection)} (${records.length})</div>
+        <div class="reclist">${records.map(rec => {
+          const rkey = (rec.uri || '').split('/').pop();
+          return `<div class="rec">
+            <div class="rk">rkey <b>${esc(rkey)}</b> · CID ${esc(rec.cid)}</div>
+            <div class="aturi">${atUri(repo.did, repo.collection, rkey)}</div>
+            <pre class="json">${syntaxHighlight(rec.value)}</pre>
+          </div>`;
+        }).join('')}</div>` : '<p class="muted">no records in this collection.</p>';
+      const carBlock = `
+        <div class="btnrow">
+          <a href="/inspect/car?did=${encodeURIComponent(did)}">⬇ Download repo (CAR)</a>
+          ${doc ? `<a href="/inspect/record?did=${encodeURIComponent(did)}" target="_blank">raw getRecord JSON</a>` : ''}
+        </div>`;
+      $('drawerBody').innerHTML = idBlock + commitBlock + recBlock + carBlock;
+    }
+
+    // ---- wire up SignalR ----
     const conn = new signalR.HubConnectionBuilder()
       .withUrl('/hub/presence')
       .withAutomaticReconnect()
@@ -82,10 +320,12 @@
 
     conn.on('presence', applyDeltas);
     conn.on('stats', setStats);
+    conn.on('commit', pushCommits);
     conn.onreconnecting(() => setLive(false));
     conn.onreconnected(async () => { await seed(); setLive(true); });
     conn.onclose(() => setLive(false));
 
+    buildEmoji();
     (async () => {
       await seed();
       try { await conn.start(); setLive(true); }

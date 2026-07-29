@@ -17,6 +17,15 @@ public sealed class FirehoseIngestService(
     ILogger<FirehoseIngestService> logger) : BackgroundService
 {
     private readonly Subject<StatusUpdate> _updates = new();
+    private readonly Subject<CommitInfo> _commits = new();
+
+    /// <summary>
+    /// Every raw <c>#commit</c> the firehose delivers, summarized as a <see cref="CommitInfo"/>
+    /// (all ops, all collections). This is the unfiltered event stream powering the live firehose
+    /// ticker, distinct from the collection-filtered <see cref="StatusUpdate"/> path that feeds the
+    /// board. Hot observable: only commits seen after a subscription are delivered.
+    /// </summary>
+    public IObservable<CommitInfo> Commits => _commits;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -49,6 +58,18 @@ public sealed class FirehoseIngestService(
         {
             if (ev is RepoCommitEvent commit)
             {
+                _commits.OnNext(new CommitInfo(
+                    commit.Seq,
+                    commit.Did,
+                    commit.Time ?? DateTimeOffset.UtcNow,
+                    commit.Ops
+                        .Select(op => new OpInfo(
+                            op.Action.ToString().ToLowerInvariant(),
+                            op.Collection,
+                            op.Rkey,
+                            op.Cid?.ToString()))
+                        .ToArray()));
+
                 foreach (RepoOp op in commit.Ops)
                 {
                     if (op.Collection != collection)
@@ -98,6 +119,7 @@ public sealed class FirehoseIngestService(
     public override void Dispose()
     {
         _updates.Dispose();
+        _commits.Dispose();
         base.Dispose();
     }
 }

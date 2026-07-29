@@ -14,6 +14,7 @@ namespace AtProto.AppView;
 /// </summary>
 public sealed class PresenceBroadcaster(
     PresenceProjection projection,
+    FirehoseIngestService ingest,
     IHubContext<PresenceHub> hub,
     ILogger<PresenceBroadcaster> logger) : IHostedService
 {
@@ -31,8 +32,15 @@ public sealed class PresenceBroadcaster(
         IDisposable stats = projection.Stats
             .Subscribe(snapshot => Broadcast("stats", ToStats(snapshot)));
 
-        _subscriptions = new CompositeDisposable(deltas, stats);
-        logger.LogInformation("Presence broadcaster live: pushing board deltas + stats over SignalR");
+        // The raw firehose ticker: every #commit, coalesced the same way. Pure fan-out — clients
+        // that miss frames simply see the next ones (the board remains the source of truth).
+        IDisposable commits = ingest.Commits
+            .Buffer(TimeSpan.FromMilliseconds(250))
+            .Where(batch => batch.Count > 0)
+            .Subscribe(batch => Broadcast("commit", batch.Select(ToCommit).ToArray()));
+
+        _subscriptions = new CompositeDisposable(deltas, stats, commits);
+        logger.LogInformation("Presence broadcaster live: pushing board deltas + stats + firehose over SignalR");
         return Task.CompletedTask;
     }
 
@@ -69,5 +77,19 @@ public sealed class PresenceBroadcaster(
         updatesPerSecond = stats.UpdatesPerSecond,
         lastSeq = stats.LastSeq,
         at = stats.At,
+    };
+
+    private static object ToCommit(CommitInfo commit) => new
+    {
+        seq = commit.Seq,
+        did = commit.Did,
+        time = commit.Time,
+        ops = commit.Ops.Select(op => new
+        {
+            action = op.Action,
+            collection = op.Collection,
+            rkey = op.Rkey,
+            cid = op.Cid,
+        }).ToArray(),
     };
 }

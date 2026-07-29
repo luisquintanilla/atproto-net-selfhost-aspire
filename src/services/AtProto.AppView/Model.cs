@@ -43,3 +43,16 @@ public sealed record PresenceChange(
     bool Removed,
     long Seq,
     DateTimeOffset UpdatedAt);
+
+/// <summary>One op inside a raw firehose commit (for the live "firehose ticker" view).</summary>
+public sealed record OpInfo(string Action, string Collection, string Rkey, string? Cid);
+
+/// <summary>
+/// A raw <c>#commit</c> summary surfaced from ingest for the firehose ticker: the exact ops the
+/// firehose carried, independent of whether they matched the indexed collection. Lets the UI show
+/// the unprocessed event stream next to the materialized board.
+/// </summary>
+public sealed record CommitInfo(long Seq, string Did, DateTimeOffset Time, IReadOnlyList<OpInfo> Ops);
+
+/// <summary>The body of a <c>POST /compose</c> request: the emoji "you" want to broadcast.</summary>
+public sealed record ComposeRequest(string Status);

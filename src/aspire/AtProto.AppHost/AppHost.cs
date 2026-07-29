@@ -13,6 +13,7 @@ var relay = builder.AddAtprotoRelay<Projects.AtProto_Relay>("relay")
 
 builder.AddAtprotoAppView<Projects.AtProto_AppView>("appview")
     .WithFirehose(relay)
+    .WithPds(pds)
     .WithCollection("place.selfhost.status");
 
 // Demo traffic: register accounts on the PDS and write live status records so the board populates.
