@@ -9,6 +9,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <Description>CARv1 (Content Addressable aRchive) reader and writer, the export format for AT Protocol repositories. Part of the atproto-net-selfhost-aspire stack.</Description>
   </PropertyGroup>
 
 </Project>

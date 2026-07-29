@@ -8,4 +8,27 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
+
+  <!--
+    Package metadata shared by the reusable libraries. Nothing packs by default (IsPackable=false);
+    a library opts in with <IsPackable>true</IsPackable> and its own <Description>. These properties
+    are inert for projects that never pack (services, apps, the AppHost, and tests), so they can live
+    here unconditionally. The pack-only settings (readme, symbols, XML docs) live in
+    Directory.Build.targets, gated on IsPackable so they only affect the libraries.
+  -->
+  <PropertyGroup Label="Package metadata">
+    <IsPackable>false</IsPackable>
+    <Product>atproto-net-selfhost-aspire</Product>
+    <Authors>Luis Quintanilla</Authors>
+    <Company>Luis Quintanilla</Company>
+    <Copyright>Copyright (c) 2026 Luis Quintanilla</Copyright>
+    <PackageProjectUrl>https://github.com/luisquintanilla/atproto-net-selfhost-aspire</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/luisquintanilla/atproto-net-selfhost-aspire</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>atproto;at-protocol;bluesky;decentralized;fediverse;dotnet</PackageTags>
+    <!-- Preview line: the API surface is still settling, so these are not published to nuget.org yet. -->
+    <VersionPrefix>0.1.0</VersionPrefix>
+  </PropertyGroup>
 </Project>

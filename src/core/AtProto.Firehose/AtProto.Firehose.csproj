@@ -12,6 +12,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <Description>AT Protocol firehose frame decoding and a reactive, pull-based ingest core. Part of the atproto-net-selfhost-aspire stack.</Description>
   </PropertyGroup>
 
 </Project>

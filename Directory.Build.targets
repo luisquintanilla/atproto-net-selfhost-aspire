@@ -1,0 +1,24 @@
+<Project>
+
+  <!--
+    Pack-only settings. These apply only to projects that opt in with <IsPackable>true</IsPackable>
+    (the reusable libraries). This file is imported after each project body, so IsPackable is already
+    resolved and the condition is reliable. Non-packable projects (services, apps, AppHost, tests)
+    are untouched, keeping the hero app free of any packaging side effects.
+  -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Public members are documented where it matters; don't fail the pack over the gaps. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- One shared package README so every preview package has a landing page pointing back to the repo. -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)docs/nuget/README.md" Pack="true" PackagePath="README.md" Visible="false" />
+  </ItemGroup>
+
+</Project>

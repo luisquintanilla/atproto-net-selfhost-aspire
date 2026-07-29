@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsAspireHostingIntegration>true</IsAspireHostingIntegration>
+    <IsPackable>true</IsPackable>
+    <Description>.NET Aspire hosting integration to run a self-hosted AT Protocol stack (PDS, Relay, AppView). Part of the atproto-net-selfhost-aspire stack.</Description>
   </PropertyGroup>
 
   <ItemGroup>
