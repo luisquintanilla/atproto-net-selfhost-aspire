@@ -495,6 +495,42 @@ D["federation"] = () => {
   return frame(w, h, b, "federation / directory");
 };
 
+// 17. Extensibility map — where you plug in across the pipeline.
+D["extensibility"] = () => {
+  const w = 950, h = 384;
+  const badge = (cx, cy, n, color = C.you) =>
+    `<circle cx="${cx}" cy="${cy}" r="13" fill="${color}" stroke="${C.bg}" stroke-width="2.5"/><text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="13" font-weight="800" fill="${C.bg}">${n}</text>`;
+  let b = `<text x="30" y="58" fill="${C.text}" font-size="21" font-weight="700">Where you plug in</text>
+  <text x="31" y="80" fill="${C.muted}" font-size="13">The stack is a pipeline. Each stage is an extension point, and two concerns cut across all of them.</text>`;
+  const stages = [
+    { icon: "📜", title: "Lexicon", sub: "define your record type", color: C.you },
+    { icon: "🏠", title: "PDS / repo", sub: "new record or XRPC", color: C.pds },
+    { icon: "📡", title: "Firehose", sub: "consume via library", color: C.relay },
+    { icon: "📰", title: "AppView", sub: "your projection + store", color: C.appview },
+    { icon: "🖥️", title: "UI + XRPC", sub: "your endpoints + board", color: C.browser },
+  ];
+  const cw = 150, gap = 40, x0 = 20, cy = 124, ch = 80;
+  const xs = stages.map((_, i) => x0 + i * (cw + gap));
+  const edge = [C.pds, C.relay, C.appview, C.browser];
+  for (let i = 0; i < stages.length - 1; i++) {
+    b += arrow(xs[i] + cw, cy + ch / 2, xs[i + 1], cy + ch / 2, { color: edge[i] });
+  }
+  stages.forEach((s, i) => {
+    b += card(xs[i], cy, cw, ch, { color: s.color, icon: s.icon, title: s.title, sub: s.sub });
+    b += badge(xs[i], cy, i + 1);
+  });
+  const bandX = x0, bandW = xs[4] + cw - x0;
+  const band = (y, n, color, label, note) =>
+    `<rect x="${bandX}" y="${y}" width="${bandW}" height="42" rx="12" fill="${C.panel2}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6 4"/><rect x="${bandX}" y="${y}" width="6" height="42" rx="3" fill="${color}"/>` +
+    badge(bandX + 26, y + 21, n, color) +
+    `<text x="${bandX + 52}" y="${y + 20}" fill="${C.text}" font-size="14" font-weight="650">${esc(label)}</text>` +
+    `<text x="${bandX + 52}" y="${y + 34}" fill="${C.muted}" font-size="12">${esc(note)}</text>`;
+  b += band(232, 6, C.appview, "Aspire topology", "compose your own stack with AddAtproto* + With*");
+  b += band(288, 7, C.pds, "Storage", "swap in-memory for durable persistence (follow ICursorStore)");
+  b += legend(30, 356, [["lexicon", C.you], ["pds", C.pds], ["firehose", C.relay], ["appview", C.appview], ["ui", C.browser]]);
+  return frame(w, h, b, "extensibility map");
+};
+
 // ---- emit ----------------------------------------------------------------------------
 let count = 0;
 for (const [name, build] of Object.entries(D)) {

@@ -100,8 +100,9 @@ Start here:
 5. [Services](docs/services.md), endpoint and config reference.
 6. [Scenarios](docs/scenarios.md), why this exists and where it fits.
 7. [Packaging](docs/packaging.md), the extractable libraries and how preview packages are built.
+8. [Extending](docs/extending.md), build on the stack: reuse a library, add a lexicon, build a projection, swap storage, compose a topology.
 
-The dense implementation log is [docs/plan.md](docs/plan.md).
+The dense implementation log is [docs/plan.md](docs/plan.md). To build or change the stack, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Layout
 

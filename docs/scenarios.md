@@ -80,6 +80,8 @@ The status lexicon is a small shared contract. The same spine can support posts,
 3. Emit commits on the firehose.
 4. Let AppViews project the stream into useful read models.
 
+For the step-by-step how-to (define a lexicon and codegen a typed record, index a different collection, build your own projection), see [extending.md](extending.md).
+
 ### A federation of small instances
 
 The wire is not limited to one stack. Several small self-hosted PDS instances can announce themselves to a shared relay, and an AppView can present a directory of everyone on the wire. Each instance publishes a `place.selfhost.instance` record and `requestCrawl`s the relay on startup; the AppView's `/directory` aggregates the relay's `listHosts` with those records. The instances never connect to each other directly. They discover each other through the shared relay and directory, which is exactly how the public network scales.

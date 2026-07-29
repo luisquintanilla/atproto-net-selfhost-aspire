@@ -11,6 +11,7 @@ This project is a self-hosted AT Protocol stack in .NET. It gives you a Personal
 5. [Services](services.md), inspect each service surface.
 6. [Scenarios](scenarios.md), see why you might use this.
 7. [Packaging](packaging.md), see which libraries are extractable and how preview packages are built.
+8. [Extending](extending.md), build on the stack: reuse a library, add a lexicon, build a projection, swap storage, compose a topology.
 
 ## Docs map
 
@@ -23,6 +24,7 @@ This project is a self-hosted AT Protocol stack in .NET. It gives you a Personal
 | [Services](services.md) | PDS, Relay, and AppView endpoint reference, config, and standalone run commands. |
 | [Scenarios](scenarios.md) | Why the project exists, anchored on Statusphere and self-hosted atproto use cases. |
 | [Packaging](packaging.md) | The nine extractable libraries, the layering that keeps the core service-free, and how preview packages are built. |
+| [Extending](extending.md) | The cookbook for building on the stack: reuse a library, define a lexicon, index a different collection, build your own projection, add an endpoint, swap storage, compose a topology, and what is left for production. |
 | [Implementation plan](plan.md) | Dense implementation log and milestone evidence. Start there only if you want history. |
 
 If you are new to atproto, read the primer first. If you already know the protocol, jump to the architecture and services references.
