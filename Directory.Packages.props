@@ -2,6 +2,7 @@
   <ItemGroup>
     <!-- Aspire hosting -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.2" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.0.2" />
 
     <!-- Core codecs -->
     <PackageVersion Include="System.Formats.Cbor" Version="10.0.8" />

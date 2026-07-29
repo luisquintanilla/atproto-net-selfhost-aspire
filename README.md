@@ -5,10 +5,12 @@ core services - **PDS**, **Relay**, and **AppView** - and wires them together wi
 **.NET Aspire** so you can *host your own atproto stack*.
 
 The end goal: each service becomes a reusable **component** you plug in as a native Aspire
-integration (`builder.AddAtprotoPds()`, `.AddAtprotoRelay()`, `.AddAtprotoAppView()`).
+integration (`builder.AddAtprotoPds()`, `.AddAtprotoRelay()`, `.AddAtprotoAppView()`) — which the
+AppHost already does today.
 
-> Status: early. Milestones **M0–M4** are in place — the full self-hosted **PDS → Relay → AppView**
-> stack runs under `aspire run`. See the roadmap below.
+> Status: the full self-hosted **PDS → Relay → AppView** stack runs under `aspire run`, declared
+> through the "native" `AtProto.Hosting.Atproto` integration. Milestones **M0–M5** are done; **M6**
+> (federation, did:plc, OAuth, packaging) is the remaining stretch. See the roadmap below.
 
 ## Why this exists
 
@@ -42,6 +44,23 @@ src/
 lexicons/    custom lexicon JSON (the demo status record)
 tests/       core interop vectors · firehose · integration
 docs/        architecture notes and ADRs
+```
+
+## Host your own stack (the AppHost)
+
+The whole point: standing up a self-hosted atproto stack is a short declarative chain. The AppHost
+uses the `AtProto.Hosting.Atproto` integration — the env-var wiring contract lives in the library,
+not the AppHost:
+
+```csharp
+var pds = builder.AddAtprotoPds<Projects.AtProto_Pds>("pds");
+
+var relay = builder.AddAtprotoRelay<Projects.AtProto_Relay>("relay")
+    .WithUpstream(pds);                       // relay auto-crawls the pds firehose
+
+builder.AddAtprotoAppView<Projects.AtProto_AppView>("appview")
+    .WithFirehose(relay)                      // appview auto-subscribes the relay
+    .WithCollection("place.selfhost.status"); // and indexes this collection
 ```
 
 ## Prerequisites
@@ -108,7 +127,7 @@ The build is phased. Each milestone is independently demoable.
 - **M2** - AppView "presence board" over the public firehose (emoji status, latest-wins) *(done)*
 - **M3** - our own PDS (`did:web`), MST build + commit signing + CAR write *(done — self-hosted PDS → AppView loop runs under `aspire run`)*
 - **M4** - our own Relay (aggregate PDS firehoses, global sequence) *(done — full **PDS → Relay → AppView** loop runs under `aspire run`)*
-- **M5** - Aspire orchestration + custom "native" integrations
+- **M5** - Aspire orchestration + custom "native" integrations *(done — the AppHost declares the stack with `AddAtprotoPds/Relay/AppView` + `WithUpstream/WithFirehose/WithCollection`)*
 - **M6** - stretch: federation discovery, did:plc, OAuth, packaging
 
 ## License

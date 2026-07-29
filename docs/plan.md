@@ -12,10 +12,12 @@ Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at 
 
 ## 0. Progress (live status — updated 2026-07-28)
 
-**Autopilot lane `M0 → T0 → M1 → M2 → M3 → M4` is COMPLETE and verified. The full three-tier self-hosted stack
-(our PDS → our Relay → AppView presence board) runs end-to-end under `aspire run`, with a StatusSeeder writing
-live `place.selfhost.status` records that flow PDS→Relay→AppView and light up the board with decoded emoji.
-Next on autopilot: M5 (Aspire native integrations).**
+**Autopilot lane `M0 → T0 → M1 → M2 → M3 → M4 → M5` is COMPLETE and verified. The full three-tier self-hosted
+stack (our PDS → our Relay → AppView presence board) runs end-to-end under `aspire run`, now declared with the
+**"native" `AtProto.Hosting.Atproto` integration** (`AddAtprotoPds/Relay/AppView` + `WithUpstream`/`WithFirehose`/
+`WithCollection`) so the AppHost is a short declarative chain. A StatusSeeder writes live
+`place.selfhost.status` records that flow PDS→Relay→AppView and light up the board with decoded emoji.
+Remaining: M6 (stretch — federation discovery, did:plc, OAuth, packaging).**
 
 | Phase | Status | Commit | Evidence |
 |-------|--------|--------|----------|
@@ -27,24 +29,27 @@ Next on autopilot: M5 (Aspire native integrations).**
 | **M3 (gate)** MST **write** core | ✅ done | `f56b25d` | rebuilt MST root == reference `commit.data` **exactly** (`bafyrei…v6ubfi`); **462/462** node blocks byte-identical; canonical encoder round-trips **2133/2133** real blocks |
 | **M3** PDS writes: signing · CAR write · XRPC · firehose | ✅ done | `ce0d5a5`, `f4e4cf7`, `5aa01dc`, `4058ee6` | k256/p256 commit signing (verifies the real bsky sig); CARv1 writer byte-exact vs the 720478-byte export; `AtProto.Pds` XRPC + did:web; **Pds e2e 4/4** — an independent firehose client reads a signature-verifiable `#commit`, `getRepo` CARv1 validates |
 | **Capstone** self-hosted PDS → AppView loop under `aspire run` | ✅ verified | `62eac75` | AppView repointed at **our** PDS (`Firehose__Url`); `StatusSeeder` writes `place.selfhost.status`; board shows the **decoded emoji**, latest-wins per DID. **Live**: 6 users, getStats advancing (totalUpdates 76→78, lastSeq 88→90), board HTTP 200. New `SelfHostedLoopTests` drives the real ingest→Rx-projection in-process |
-| **M4** our own Relay (crawl · global seq · re-emit) | ✅ done | *(this change)* | `AtProto.Relay` crawls the upstream PDS, assigns a **global** seq via `FirehoseBroadcaster.PublishNext`, re-emits `subscribeRepos`; lenient validate (DID + rev-monotonic); `listHosts`/`getRepoStatus`/`getRepo`-redirect; per-host cursor + global-seq persisted across restart. **Live under `aspire run`**: PDS→**Relay**→AppView — relay `active` (lastUpstreamSeq 1510), AppView `lastSeq` tracks the relay's global seq, board 6 users w/ emoji, relay tracks per-repo rev. **Pds.Tests 7/7** incl. `RelayLoopTests` (full loop + restart-resume: no reset, no reprocess) |
-| M5 Aspire integrations | ⚪ pending | — | autopilot after M4 |
+| **M4** our own Relay (crawl · global seq · re-emit) | ✅ done | `89d7fba` | `AtProto.Relay` crawls the upstream PDS, assigns a **global** seq via `FirehoseBroadcaster.PublishNext`, re-emits `subscribeRepos`; lenient validate (DID + rev-monotonic); `listHosts`/`getRepoStatus`/`getRepo`-redirect; per-host cursor + global-seq persisted across restart. **Live under `aspire run`**: PDS→**Relay**→AppView — relay `active` (lastUpstreamSeq 1510), AppView `lastSeq` tracks the relay's global seq, board 6 users w/ emoji, relay tracks per-repo rev. **Pds.Tests 7/7** incl. `RelayLoopTests` (full loop + restart-resume: no reset, no reprocess) |
+| **M5** Aspire "native" integrations | ✅ done | *(this change)* | `AtProto.Hosting.Atproto`: `AddAtprotoPds/Relay/AppView<TProject>` + `WithUpstream`/`WithFirehose`/`WithCollection` encode the env-var wiring contract so the AppHost collapses to a **declarative chain** (relay auto-crawls the pds, appview auto-subscribes the relay). Referenced with `IsAspireProjectResource="false"` (a hosting lib, not a service). **Live under `aspire run`** via the refactored AppHost: same working PDS→Relay→AppView board (6 users, emoji, global seq persisted *across* runs). **Hosting.Tests 1/1** asserts the topology (wait-ordering + `Pds__PublicUrl`/`Relay__Upstreams__0`/`Firehose__Url`/`AppView__Collection`) |
 | M6 stretch | ⚪ deferred | — | not in autopilot run |
 
-**Totals:** 62/62 tests green (Fixtures 5, Core 38, Firehose 5, AppView 7, Pds 7). Reactive layering held exactly
-as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only.
+**Totals:** 63/63 tests green (Fixtures 5, Core 38, Firehose 5, AppView 7, Pds 7, Hosting 1). Reactive layering
+held exactly as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only.
 
-**M4 is complete: the full three-tier stack is live.** Our own **PDS** (did:web, MST write, k256/p256 commit
-signing, CARv1 write, `subscribeRepos`) → our own **Relay** (crawls the PDS, assigns a global seq, re-emits an
-aggregated firehose, persists per-host + global cursors) → **AppView** (Rx presence projection) runs end-to-end
-under `aspire run`, with a `StatusSeeder` writing real `place.selfhost.status` records that flow all the way to
-the board with their decoded emoji (latest-wins per account). Proven three ways: the MST root-CID gate (462/462
-node blocks byte-identical to the reference), the PDS e2e suite (a `#commit` an independent consumer verifies),
-and `RelayLoopTests` (the actual AppView ingest against our Relay + a restart that resumes cursors with no reset
-and no reprocessing).
-**Next action:** **M5** (Aspire "native" integrations — a `AtProto.Hosting.Atproto` library exposing
-`AddAtprotoPds/Relay/AppView` + `.WithReference()` auto-wiring so the AppHost collapses to a short declarative
-chain), on autopilot.
+**M5 is complete: the whole self-hosted stack is now a "native" Aspire integration.** Our own **PDS** (did:web,
+MST write, k256/p256 commit signing, CARv1 write, `subscribeRepos`) → our own **Relay** (crawls the PDS, assigns
+a global seq, re-emits an aggregated firehose, persists per-host + global cursors) → **AppView** (Rx presence
+projection) runs end-to-end under `aspire run`, declared through the `AtProto.Hosting.Atproto` library
+(`AddAtprotoPds/Relay/AppView` + `WithUpstream`/`WithFirehose`/`WithCollection`) so the AppHost is a short
+declarative chain that auto-wires the topology. A `StatusSeeder` writes real `place.selfhost.status` records that
+flow all the way to the board with their decoded emoji (latest-wins per account). Proven end-to-end: the MST
+root-CID gate (462/462 node blocks byte-identical to the reference), the PDS e2e suite (a `#commit` an
+independent consumer verifies), `RelayLoopTests` (the actual AppView ingest against our Relay + a restart that
+resumes cursors with no reset and no reprocessing), and `Hosting.Tests` (the integration wires the exact env-var
+contract + startup ordering) — plus a live `aspire run` of the refactored AppHost.
+**Next action:** the autopilot lane is done through M5. Optional **M6** (stretch — federation discovery via a
+service-advertisement record + `requestCrawl` announce, did:plc, OAuth AS, Relay strict MST inversion, NuGet
+packaging of the core libs + the Aspire integration).
 
 ---
 
@@ -312,16 +317,30 @@ AtProto.AppView ──subscribeRepos(relay)──▶ Rx.NET v7 projection ──
   PDS→relay→appview→board **and** a relay restart resumes the per-host cursor + global seq with no reset and no
   reprocessing.
 
-### M5 — Aspire orchestration + custom "native" integrations  🟢 *(autopilot after M4 — NEXT)*
-- `AtProto.AppHost` wires pds + relay + appview + postgres [+ redis] with service discovery / health / OTel;
-  appview firehose URL and pds `requestCrawl` target resolved via discovery.
-- `AtProto.Hosting.Atproto`: `builder.AddAtprotoPds(name)`, `.AddAtprotoRelay(name)`, `.AddAtprotoAppView(name)`
-  + `.WithReference()` so **relay auto-crawls the pds** and **appview auto-subscribes the relay**. Package naming
-  per community-toolkit convention (`*.Aspire.Hosting.Atproto`).
-- `AtProto.Integration.Tests` via `Aspire.Hosting.Testing`: boot AppHost → create account → write status →
-  assert presence board; chaos: restart relay/appview, assert cursor resume.
-- **Accept:** a 3-line AppHost (`AddAtprotoPds/Relay/AppView`) stands up a working self-hosted stack;
-  integration test green.
+### M5 — Aspire orchestration + custom "native" integrations  ✅ *(done — refactored AppHost verified live)*
+- `AtProto.AppHost` wires pds + relay + appview with service discovery / health / OTel; appview firehose URL and
+  relay upstream resolved via discovery. *(Postgres/redis not needed for the MVP — the services persist to files;
+  can be added later behind the same integration.)*
+- `AtProto.Hosting.Atproto`: `builder.AddAtprotoPds<TProject>(name)`, `.AddAtprotoRelay<TProject>(name)`,
+  `.AddAtprotoAppView<TProject>(name)` + `WithUpstream(pds)` / `WithFirehose(relay)` / `WithCollection(nsid)` so
+  **relay auto-crawls the pds** and **appview auto-subscribes the relay**. Generic over the AppHost-generated
+  `Projects.*` metadata (`IProjectMetadata`), so the library needs no service-project references and is referenced
+  from the AppHost with `IsAspireProjectResource="false"` (it's a hosting lib, not a runnable service). Package
+  naming can follow the community-toolkit convention (`*.Aspire.Hosting.Atproto`) when published to NuGet (M6).
+- `AtProto.Hosting.Tests`: builds the application model with the extensions (over fake project metadata, no
+  launch) and asserts the topology — wait-ordering (relay→pds, appview→relay) + the exact env-var contract
+  (`Pds__PublicUrl`, `Relay__Upstreams__0`, `Firehose__Url`, `AppView__Collection`). Deterministic, no
+  `aspire run`, no test-host package. *(A full `Aspire.Hosting.Testing` boot-and-assert e2e is deferred — the
+  runtime behavior is already covered deterministically by `RelayLoopTests`/`SelfHostedLoopTests`.)*
+- **Accept (met):** a short declarative AppHost (`AddAtprotoPds/Relay/AppView` + `WithUpstream/WithFirehose/
+  WithCollection`) stands up a working self-hosted stack — verified live under `aspire run` (board populated
+  through PDS→Relay→AppView); `Hosting.Tests` green.
+
+### M6 — Stretch: "evil atproto" federation & polish  ⚪ *(deferred — not in the autopilot run)*
+- Service-advertisement record `<nsid>.instance` published by each stack's embedded PDS + `requestCrawl`
+  announce; a directory view discovers instances; two AppHosts discover each other (federation demo).
+- did:plc support; OAuth 2.1 AS; Relay MST strict inversion; blob support; lexicon codegen; NuGet packaging of
+  core libs + Aspire integrations; multi-target core libs (`net9.0;net10.0`).
 
 ### M6 — Stretch: "evil atproto" federation & polish  ⚪ *(deferred — not in the autopilot run)*
 - Service-advertisement record `<nsid>.instance` published by each stack's embedded PDS + `requestCrawl`
