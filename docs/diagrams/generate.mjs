@@ -471,6 +471,30 @@ D["packaging"] = () => {
   return frame(w, h, b, "packaging / layering");
 };
 
+// 16. Federation — two PDS instances, one relay, one directory (they never talk directly).
+D["federation"] = () => {
+  const w = 940, h = 436;
+  let b = `<text x="30" y="58" fill="${C.text}" font-size="21" font-weight="700">Federation directory</text>
+  <text x="31" y="80" fill="${C.muted}" font-size="13">Two PDS instances announce to one relay; the AppView builds a directory. The instances never talk directly.</text>`;
+  // Row 1: two independent PDS instances.
+  b += card(70, 104, 250, 66, { color: C.pds, icon: "🏠", title: "PDS · Alpha", sub: "repos + place.selfhost.instance" });
+  b += card(620, 104, 250, 66, { color: C.pds, icon: "🏠", title: "PDS · Beta", sub: "repos + place.selfhost.instance" });
+  // Row 2: the shared relay.
+  b += card(345, 214, 250, 66, { color: C.relay, icon: "📡", title: "Relay", sub: "aggregated firehose · listHosts" });
+  // Row 3: the AppView directory view.
+  b += card(300, 328, 340, 66, { color: C.appview, icon: "📇", title: "AppView · /directory", sub: "listHosts + instance records → directory" });
+  // Announce + crawl edges (each PDS ↔ the one relay).
+  b += arrow(240, 170, 400, 214, { color: "relay", label: "requestCrawl + crawl (ws)" });
+  b += arrow(700, 170, 540, 214, { color: "relay", label: "requestCrawl + crawl (ws)" });
+  // Relay → AppView (list the hosts it aggregates).
+  b += arrow(470, 280, 470, 328, { color: "appview", label: "listHosts (http)" });
+  // AppView reads each instance record straight from its PDS (outer edges, dashed).
+  b += arrow(300, 352, 150, 170, { color: "pds", dash: true, label: "getRecord instance" });
+  b += arrow(640, 352, 790, 170, { color: "pds", dash: true, label: "getRecord instance" });
+  b += legend(30, 416, [["pds", C.pds], ["relay", C.relay], ["appview", C.appview]]);
+  return frame(w, h, b, "federation / directory");
+};
+
 // ---- emit ----------------------------------------------------------------------------
 let count = 0;
 for (const [name, build] of Object.entries(D)) {

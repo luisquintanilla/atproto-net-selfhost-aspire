@@ -129,7 +129,7 @@ The build is phased. Each milestone is independently demoable.
 - **M5** - Aspire orchestration plus native hosting integrations, done.
 - **Live SignalR UI** - board updates from server-driven projection deltas, done.
 - **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and nine extractable preview NuGet packages, done.
-- **M6 stretch** - federation discovery, `did:plc`, OAuth, stricter Relay validation, and publishing the libraries to nuget.org once the API surface settles.
+- **M6 stretch** - mostly landed: federation discovery (each PDS advertises a `place.selfhost.instance` record and `requestCrawl`s the relay; the AppView `/directory` aggregates two PDS instances one relay crawls), `did:plc` creation, blob upload/fetch, stricter Relay MST verification, lexicon-to-C# codegen, and multi-targeting the core libraries (`net9.0;net10.0`). Remaining: a full OAuth authorization server and publishing the libraries to nuget.org once the API surface settles.
 
 ## License
 

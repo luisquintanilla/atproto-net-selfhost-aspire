@@ -80,8 +80,16 @@ The status lexicon is a small shared contract. The same spine can support posts,
 3. Emit commits on the firehose.
 4. Let AppViews project the stream into useful read models.
 
+### A federation of small instances
+
+The wire is not limited to one stack. Several small self-hosted PDS instances can announce themselves to a shared relay, and an AppView can present a directory of everyone on the wire. Each instance publishes a `place.selfhost.instance` record and `requestCrawl`s the relay on startup; the AppView's `/directory` aggregates the relay's `listHosts` with those records. The instances never connect to each other directly. They discover each other through the shared relay and directory, which is exactly how the public network scales.
+
+![two PDS instances announce to one relay; the AppView builds a directory](img/federation.svg)
+
+*Figure: Alpha and Beta each announce to the same relay; the AppView builds a directory from what the relay aggregates. See [architecture.md](architecture.md#federation) for the wiring and [services.md](services.md) for the endpoints.*
+
 ## What this is not yet
 
-M0 through M5 are done, and the live SignalR board is done. M6 remains stretch work: federation discovery, `did:plc`, OAuth, stricter Relay validation, and packaging.
+Most of the stack is done: M0 through M5, the live SignalR board, the feel-real explorer, and most of the M6 stretch work (federation discovery, `did:plc` creation, blob support, stricter Relay MST validation, lexicon-to-C# codegen, and multi-targeting the core libraries). What remains is a full OAuth authorization server and publishing the preview libraries to nuget.org once the API surface settles.
 
 For the implementation status, see [plan.md](plan.md). For the exact service surfaces, see [services.md](services.md).

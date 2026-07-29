@@ -99,3 +99,18 @@ The status record is:
 | Aspire dashboard | 15194 | orchestration view | protocol state |
 
 For the .NET dataflow inside the AppView, continue to [Reactive design](reactive-design.md).
+
+## Federation
+
+One stack is useful on its own, but the same wire scales to many. Each PDS advertises itself and asks the
+relay to crawl it; the relay aggregates them into one firehose; the AppView reads the relay's host list and
+each PDS's advertisement to build a directory. The two PDS instances never talk to each other directly. They
+find each other **through** the shared relay and directory.
+
+![two PDS instances announce to one relay; the AppView builds a directory](img/federation.svg)
+
+*Figure: Two PDS instances (Alpha, Beta) each publish a `place.selfhost.instance` record and `requestCrawl` the same relay. The AppView's `/directory` aggregates the relay's `listHosts` with each instance record. The instances discover each other through the wire, not by a direct connection.*
+
+The AppHost demonstrates this by running two PDS instances that one relay crawls, so a single `aspire run`
+shows the directory populate with both. See [Services](services.md) for the `/directory` endpoint, the
+`place.selfhost.instance` advertisement, and the `requestCrawl` announce.

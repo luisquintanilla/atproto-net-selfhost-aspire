@@ -18,7 +18,7 @@ This project is a self-hosted AT Protocol stack in .NET. It gives you a Personal
 | --- | --- |
 | [Primer](primer.md) | The core atproto ideas, explained with stable analogies and a glossary. |
 | [How it works](how-it-works.md) | The life of an emoji status update, with requests, records, and diagrams. |
-| [Architecture](architecture.md) | Topology, write path, read path, identity resolution, and data model. |
+| [Architecture](architecture.md) | Topology, write path, read path, identity resolution, data model, and federation. |
 | [Reactive design](reactive-design.md) | The .NET dataflow rule: pull ingest, `IObservable` seam, Rx projection, SignalR push. |
 | [Services](services.md) | PDS, Relay, and AppView endpoint reference, config, and standalone run commands. |
 | [Scenarios](scenarios.md) | Why the project exists, anchored on Statusphere and self-hosted atproto use cases. |

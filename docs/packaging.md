@@ -22,10 +22,17 @@ and the tests) are deliberately **not** packaged. They are the hero app that con
 | `AtProto.Lexicon` | Primitives | Lexicon, NSID, and AT-URI value types. |
 | `AtProto.Cbor` | Encodings + identity | Canonical DAG-CBOR encode/decode. |
 | `AtProto.Car` | Encodings + identity | CARv1 read/write (the repo export format). |
-| `AtProto.Identity` | Encodings + identity | DID documents and did:web resolution. |
+| `AtProto.Identity` | Encodings + identity | DID documents, did:web resolution, and did:plc creation. |
 | `AtProto.Repo` | Repository | Signed commits and the Merkle Search Tree (MST). |
 | `AtProto.Firehose` | Firehose / ingest | Firehose frame decoding and the reactive ingest core. |
 | `AtProto.Hosting.Atproto` | Aspire integration | .NET Aspire hosting integration for the stack. |
+
+## Target frameworks
+
+The eight core libraries multi-target **`net9.0` and `net10.0`**, so you can consume them from either
+runtime; each preview package carries both `lib/net9.0` and `lib/net10.0` assemblies. The Aspire
+integration (`AtProto.Hosting.Atproto`) targets **`net10.0`** only, matching the .NET Aspire version it
+builds on.
 
 ## Why the layering matters
 
@@ -62,7 +69,7 @@ To confirm the gate, run `dotnet pack` and check the output: exactly the nine li
 ## Versioning intent
 
 The libraries ship as a **preview line** (`0.1.0`) and are **not published to nuget.org**. The public
-API is still moving as the services grow (OAuth, `did:plc`, richer lexicons), and we do not want to
+API is still moving as the services grow (OAuth, richer identity and lexicons), and we do not want to
 freeze names and signatures before they have settled. Preview artifacts let you try the libraries and
 pin exact versions without implying a stability promise we cannot keep yet.
 

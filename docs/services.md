@@ -13,7 +13,9 @@ The PDS is your data home, like an email provider. It creates accounts, stores s
 - Resolve local handles.
 - Create, update, delete, get, and list repo records.
 - Export repos as Content Addressable aRchive (CAR) v1 with `application/vnd.ipld.car`.
+- Store and serve blobs, content-addressed by CIDv1 (raw multicodec, sha-256).
 - Emit `#account`, `#identity`, and `#commit` frames over `subscribeRepos`.
+- Advertise itself for federation: publish a `place.selfhost.instance` record and `requestCrawl` the configured relay on startup so it joins the wire.
 
 ### Typed HTTP (XRPC) and HTTP surface
 
@@ -26,10 +28,12 @@ The PDS is your data home, like an email provider. It creates accounts, stores s
 | POST | `/xrpc/com.atproto.repo.createRecord` | Creates a record, optional caller rkey. |
 | POST | `/xrpc/com.atproto.repo.putRecord` | Updates or creates a known rkey, used by status `self`. |
 | POST | `/xrpc/com.atproto.repo.deleteRecord` | Deletes a known rkey. |
+| POST | `/xrpc/com.atproto.repo.uploadBlob` | Uploads bytes; returns a typed blob ref (CIDv1, raw multicodec, sha-256). |
 | GET | `/xrpc/com.atproto.repo.getRecord` | Query `repo`, `collection`, `rkey`; returns `{ uri, cid, value }`. |
 | GET | `/xrpc/com.atproto.repo.listRecords` | Query `repo`, `collection`, optional `limit`. |
 | GET | `/xrpc/com.atproto.sync.getRepo` | Query `did`; returns CARv1 as `application/vnd.ipld.car`. |
 | GET | `/xrpc/com.atproto.sync.getLatestCommit` | Query `did`; returns commit CID and rev. |
+| GET | `/xrpc/com.atproto.sync.getBlob` | Query `did`, `cid`; returns the stored blob bytes. |
 | WS | `/xrpc/com.atproto.sync.subscribeRepos` | Source firehose, optional `cursor`. |
 | GET | `/xrpc/com.atproto.identity.resolveHandle` | Query `handle`; returns DID. |
 | GET | `/.well-known/did.json` | PDS service DID document. |
@@ -44,6 +48,10 @@ Code pointer: `src/services/AtProto.Pds/PdsHost.cs`.
 | `Pds__PublicUrl` | `http://localhost:5100` | Externally reachable URL, used to derive did:web and service endpoint. Aspire sets this. |
 | `Pds__HandleDomain` | `pds.localhost` | Default domain for bare handles. |
 | `Pds__JwtSecret` | dev-only value | HMAC secret for session JWTs. Override outside local demos. |
+| `Pds__InstanceName` | unset | Display name advertised in `place.selfhost.instance/self`. Empty disables advertisement. |
+| `Pds__InstanceRelayUrl` | unset | Relay URL advertised in the instance record. Aspire sets this. |
+| `Pds__InstanceAppViewUrl` | unset | AppView URL advertised in the instance record. Aspire sets this. |
+| `Pds__AnnounceRelayUrls__0` | unset | Relay base URL to `requestCrawl` on startup so this PDS joins the federation. Aspire sets this. |
 
 Code pointer: `src/services/AtProto.Pds/PdsOptions.cs`.
 
@@ -66,6 +74,7 @@ The Relay is the newswire. It crawls one or more upstream PDS or Relay firehoses
 - Re-emit an aggregated `subscribeRepos` stream with global sequence numbers.
 - Track hosts, upstream cursors, and latest repo revisions.
 - Redirect repo downloads to the authoritative PDS.
+- Strictly verify each `#commit` before republishing: rebuild the repo's MST root from `commit.data` and check every block CID (toggle with `Relay__StrictCommitValidation`).
 
 ### XRPC surface
 
@@ -86,6 +95,7 @@ Code pointer: `src/services/AtProto.Relay/RelayHost.cs`.
 | `Relay__PublicUrl` | unset | Informational public URL for this relay. |
 | `Relay__Upstreams__0` | none | Upstream base URL to crawl. Aspire sets this from `.WithUpstream(pds)`. |
 | `Relay__CursorDir` | app default | Directory for per-host cursors and global sequence persistence. |
+| `Relay__StrictCommitValidation` | `true` | Rebuild each commit's MST root and verify block CIDs before re-emitting. |
 
 Code pointer: `src/services/AtProto.Relay/RelayOptions.cs`.
 
@@ -130,6 +140,7 @@ The AppView is the newspaper or search index. It reads the Relay firehose, filte
 | GET | `/inspect/record` | Query `did`, `collection`, `rkey`; returns `{ uri, cid, value }`. |
 | GET | `/inspect/repo` | Query `did`; returns `{ did, handle, pds, commit, didDoc, collection, records }`. |
 | GET | `/inspect/car` | Query `did`; downloads a CAR file. |
+| GET | `/directory` | Federation directory: aggregates the relay's `listHosts` with each PDS's `place.selfhost.instance` record. Rendered by `directory.html`. |
 
 Code pointer for current board API and hub: `src/services/AtProto.AppView/Program.cs`. The explorer endpoints are part of the concurrent app explorer surface described by this doc set.
 

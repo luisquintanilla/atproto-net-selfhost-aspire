@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="436" viewBox="0 0 940 436" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a-line" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2a2f4a"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0bd"/></marker><marker id="a-you" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e0b341"/></marker><marker id="a-pds" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4ec97a"/></marker><marker id="a-relay" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c678dd"/></marker><marker id="a-appview" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7aa2ff"/></marker><marker id="a-browser" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#56b6c2"/></marker>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect x="0.75" y="0.75" width="938.5" height="434.5" rx="16" fill="#0f1220" stroke="#2a2f4a" stroke-width="1.5"/>
+  <text x="26" y="34" fill="#9aa0bd" font-size="12.5" letter-spacing="0.09em" font-weight="600">FEDERATION / DIRECTORY</text>
+  <text x="30" y="58" fill="#e7e9f3" font-size="21" font-weight="700">Federation directory</text>
+  <text x="31" y="80" fill="#9aa0bd" font-size="13">Two PDS instances announce to one relay; the AppView builds a directory. The instances never talk directly.</text><g filter="url(#sh)">
+    <rect x="70" y="104" width="250" height="66" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/>
+    <rect x="70" y="104" width="6" height="66" rx="3" fill="#4ec97a"/>
+  </g>
+  <text x="97" y="138" font-size="24" text-anchor="middle" dominant-baseline="central">🏠</text>
+  <text x="116" y="132" fill="#e7e9f3" font-size="15" font-weight="650">PDS · Alpha</text>
+  <text x="116" y="150" fill="#9aa0bd" font-size="12"><tspan x="116" dy="0">repos +</tspan><tspan x="116" dy="15">place.selfhost.instance</tspan></text><g filter="url(#sh)">
+    <rect x="620" y="104" width="250" height="66" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/>
+    <rect x="620" y="104" width="6" height="66" rx="3" fill="#4ec97a"/>
+  </g>
+  <text x="647" y="138" font-size="24" text-anchor="middle" dominant-baseline="central">🏠</text>
+  <text x="666" y="132" fill="#e7e9f3" font-size="15" font-weight="650">PDS · Beta</text>
+  <text x="666" y="150" fill="#9aa0bd" font-size="12"><tspan x="666" dy="0">repos +</tspan><tspan x="666" dy="15">place.selfhost.instance</tspan></text><g filter="url(#sh)">
+    <rect x="345" y="214" width="250" height="66" rx="12" fill="#171a2b" stroke="#c678dd" stroke-width="1.5"/>
+    <rect x="345" y="214" width="6" height="66" rx="3" fill="#c678dd"/>
+  </g>
+  <text x="372" y="248" font-size="24" text-anchor="middle" dominant-baseline="central">📡</text>
+  <text x="391" y="242" fill="#e7e9f3" font-size="15" font-weight="650">Relay</text>
+  <text x="391" y="260" fill="#9aa0bd" font-size="12"><tspan x="391" dy="0">aggregated firehose ·</tspan><tspan x="391" dy="15">listHosts</tspan></text><g filter="url(#sh)">
+    <rect x="300" y="328" width="340" height="66" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/>
+    <rect x="300" y="328" width="6" height="66" rx="3" fill="#7aa2ff"/>
+  </g>
+  <text x="327" y="362" font-size="24" text-anchor="middle" dominant-baseline="central">📇</text>
+  <text x="346" y="356" fill="#e7e9f3" font-size="15" font-weight="650">AppView · /directory</text>
+  <text x="346" y="374" fill="#9aa0bd" font-size="12"><tspan x="346" dy="0">listHosts + instance records → directory</tspan></text><path d="M240 170 L400 214" fill="none" stroke="#c678dd" stroke-width="2"  marker-end="url(#a-relay)"/><g><rect x="230.5" y="181" width="179" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="320" y="194.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">requestCrawl + crawl (ws)</text></g><path d="M700 170 L540 214" fill="none" stroke="#c678dd" stroke-width="2"  marker-end="url(#a-relay)"/><g><rect x="530.5" y="181" width="179" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="620" y="194.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">requestCrawl + crawl (ws)</text></g><path d="M470 280 L470 328" fill="none" stroke="#7aa2ff" stroke-width="2"  marker-end="url(#a-appview)"/><g><rect x="410.2" y="293" width="119.6" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="470" y="306.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">listHosts (http)</text></g><path d="M300 352 L150 170" fill="none" stroke="#4ec97a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a-pds)"/><g><rect x="158.6" y="250" width="132.8" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="225" y="263.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">getRecord instance</text></g><path d="M640 352 L790 170" fill="none" stroke="#4ec97a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a-pds)"/><g><rect x="648.6" y="250" width="132.8" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="715" y="263.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">getRecord instance</text></g><circle cx="36" cy="416" r="6" fill="#4ec97a"/><text x="48" y="420" fill="#9aa0bd" font-size="12">pds</text><circle cx="95.2" cy="416" r="6" fill="#c678dd"/><text x="107.2" y="420" fill="#9aa0bd" font-size="12">relay</text><circle cx="167.2" cy="416" r="6" fill="#7aa2ff"/><text x="179.2" y="420" fill="#9aa0bd" font-size="12">appview</text>
+</svg>

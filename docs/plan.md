@@ -17,7 +17,9 @@ stack (our PDS → our Relay → AppView presence board) runs end-to-end under `
 **"native" `AtProto.Hosting.Atproto` integration** (`AddAtprotoPds/Relay/AppView` + `WithUpstream`/`WithFirehose`/
 `WithCollection`) so the AppHost is a short declarative chain. A StatusSeeder writes live
 `place.selfhost.status` records that flow PDS→Relay→AppView and light up the board with decoded emoji.
-Remaining: M6 (stretch — federation discovery, did:plc, OAuth, nuget.org publish).**
+Remaining: M6 (stretch) is now **mostly landed** (federation discovery, did:plc creation, blob support, strict
+Relay MST verification, lexicon → C# codegen, multi-target core libs); only OAuth 2.1 AS and nuget.org publish
+remain.**
 
 | Phase | Status | Commit | Evidence |
 |-------|--------|--------|----------|
@@ -31,10 +33,11 @@ Remaining: M6 (stretch — federation discovery, did:plc, OAuth, nuget.org publi
 | **Capstone** self-hosted PDS → AppView loop under `aspire run` | ✅ verified | `62eac75` | AppView repointed at **our** PDS (`Firehose__Url`); `StatusSeeder` writes `place.selfhost.status`; board shows the **decoded emoji**, latest-wins per DID. **Live**: 6 users, getStats advancing (totalUpdates 76→78, lastSeq 88→90), board HTTP 200. New `SelfHostedLoopTests` drives the real ingest→Rx-projection in-process |
 | **M4** our own Relay (crawl · global seq · re-emit) | ✅ done | `89d7fba` | `AtProto.Relay` crawls the upstream PDS, assigns a **global** seq via `FirehoseBroadcaster.PublishNext`, re-emits `subscribeRepos`; lenient validate (DID + rev-monotonic); `listHosts`/`getRepoStatus`/`getRepo`-redirect; per-host cursor + global-seq persisted across restart. **Live under `aspire run`**: PDS→**Relay**→AppView — relay `active` (lastUpstreamSeq 1510), AppView `lastSeq` tracks the relay's global seq, board 6 users w/ emoji, relay tracks per-repo rev. **Pds.Tests 7/7** incl. `RelayLoopTests` (full loop + restart-resume: no reset, no reprocess) |
 | **M5** Aspire "native" integrations | ✅ done | *(this change)* | `AtProto.Hosting.Atproto`: `AddAtprotoPds/Relay/AppView<TProject>` + `WithUpstream`/`WithFirehose`/`WithCollection` encode the env-var wiring contract so the AppHost collapses to a **declarative chain** (relay auto-crawls the pds, appview auto-subscribes the relay). Referenced with `IsAspireProjectResource="false"` (a hosting lib, not a service). **Live under `aspire run`** via the refactored AppHost: same working PDS→Relay→AppView board (6 users, emoji, global seq persisted *across* runs). **Hosting.Tests 1/1** asserts the topology (wait-ordering + `Pds__PublicUrl`/`Relay__Upstreams__0`/`Firehose__Url`/`AppView__Collection`) |
-| M6 stretch | ⚪ deferred | — | live reactive UI (SignalR) landed ✅ (see below); rest not in autopilot run |
+| M6 stretch | 🟢 mostly done | — | live reactive UI (SignalR) landed ✅ (see below); most M6 stretch work landed later in a fleet run — see the dedicated row below |
 | **Explorer + docs + preview packages** | ✅ done | *(this change)* | **Feel-real explorer**: inspect the real record (AT-URI · JSON · CID), the repo (DID doc · signed commit · records), and a CARv1 download, plus **compose your own status** and a **live firehose ticker** — all single-origin via a did:web→PDS resolver in the AppView. **Rich SVG docs**: a newcomer-first docs set (primer/how-it-works/architecture/reactive/services/scenarios/packaging) with **15 hand-authored SVG diagrams** from a checked-in generator. **Preview packages**: nine reusable libs gated by `IsPackable` (core + `AtProto.Hosting.Atproto`), MIT + README + SourceLink, produced by a `dotnet pack` CI job (no nuget.org). **Live under `aspire run`**: `POST /compose 🌤` flowed PDS→Relay→AppView and lit the board; `/inspect/record\|repo\|car` returned the real record, the DID doc + signed commit (`rev 3mrshzy…`), and a 563-byte CARv1. **AppView 28/28** incl. resolver/inspect/compose suites |
+| **M6** federation &amp; polish *(fleet run)* | 🟢 mostly done | *(this change)* | **Federation demo**: each PDS publishes a `place.selfhost.instance` record + `requestCrawl` announce; AppView `/directory` aggregates the relay's `listHosts` + instance records; the AppHost runs **two** PDS instances (Alpha + Beta) one relay crawls — live `/directory` returned both. **did:plc creation** (offline genesis → DID; matched real `did:plc:z72i7hdynmk6r22z27h6tvur`). **Blob** `uploadBlob`/`getBlob` (CIDv1/raw/sha-256). **Relay strict MST** verify (rebuilt the 462-node real-repo root == `commit.data`). **Lexicon → C# codegen** (Roslyn compile-checked). **Multi-target** core libs `net9.0;net10.0`. Deferred: OAuth 2.1 AS, nuget.org publish. **101/101** green |
 
-**Totals:** 84/84 tests green (Fixtures 5, Core 38, Firehose 5, AppView 28, Pds 7, Hosting 1). Reactive layering
+**Totals:** 101/101 tests green (Fixtures 5, Hosting 1, Lexicon.CodeGen 3, Core 41, Firehose 5, Relay 5, AppView 30, Pds 11). Reactive layering
 held exactly as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only — and now
 pushed all the way to the browser (see the live-UI note).
 
@@ -59,10 +62,12 @@ per-row flash — no polling. So the full chain is now `firehose IObservable →
 (broadcaster) → SignalR → browser`. **Verified live** under `aspire run`: a real WebSocket SignalR client received
 8 `stats` + 8 `presence` deltas driven by actual seeder writes (🧠/📚/🌤, decoded emoji, monotonic seq
 2068→2069→2070). Test: `PresenceProjectionTests.Changes_publishes_one_delta_per_update…` (AppView 8/8).
-**Next action:** the autopilot lane is done through M5, plus the live reactive UI. Optional **M6** (stretch —
-federation discovery via a
-service-advertisement record + `requestCrawl` announce, did:plc, OAuth AS, Relay strict MST inversion, and
-publishing the preview libraries to nuget.org once the API surface settles).
+**Next action:** the autopilot lane is done through M5, plus the live reactive UI and the feel-real explorer.
+Most of **M6** (stretch) also landed in a fleet run — federation discovery (service-advertisement record +
+`requestCrawl` announce + AppView `/directory`, two PDS instances one relay crawls), did:plc creation, blob
+support, Relay strict MST verification, lexicon → C# codegen, and multi-targeting the core libs `net9.0;net10.0`.
+**Remaining M6:** a full OAuth 2.1 authorization server and publishing the preview libraries to nuget.org once the
+API surface settles.
 
 ---
 
@@ -351,17 +356,22 @@ AtProto.AppView ──subscribeRepos(relay)──▶ Rx.NET v7 projection ──
   WithCollection`) stands up a working self-hosted stack — verified live under `aspire run` (board populated
   through PDS→Relay→AppView); `Hosting.Tests` green.
 
-### M6 — Stretch: "evil atproto" federation & polish  ⚪ *(deferred — not in the autopilot run)*
-- Service-advertisement record `<nsid>.instance` published by each stack's embedded PDS + `requestCrawl`
-  announce; a directory view discovers instances; two AppHosts discover each other (federation demo).
-- did:plc support; OAuth 2.1 AS; Relay MST strict inversion; blob support; lexicon codegen; NuGet packaging of
-  core libs + Aspire integrations; multi-target core libs (`net9.0;net10.0`).
-
-### M6 — Stretch: "evil atproto" federation & polish  ⚪ *(deferred — not in the autopilot run)*
-- Service-advertisement record `<nsid>.instance` published by each stack's embedded PDS + `requestCrawl`
-  announce; a directory view discovers instances; two AppHosts discover each other (federation demo).
-- did:plc support; OAuth 2.1 AS; Relay MST strict inversion; blob support; lexicon codegen; NuGet packaging of
-  core libs + Aspire integrations; multi-target core libs (`net9.0;net10.0`).
+### M6 — Stretch: "evil atproto" federation & polish  🟢 *(mostly landed in a fleet run — 2026-07-29)*
+- ✅ **Federation demo**: each embedded PDS publishes a `place.selfhost.instance` service-advertisement record
+  and announces itself to the relay via `requestCrawl`; the AppView `/directory` aggregates the relay's
+  `listHosts` plus each instance record; the AppHost runs **two** PDS instances (Alpha + Beta) that one relay
+  crawls, so a single `aspire run` shows them discovering each other. `directory.html` renders the result.
+- ✅ **did:plc creation** (offline): build + sign a PLC genesis op and derive `did:plc:…` — matched the real
+  bsky.app vector (`did:plc:z72i7hdynmk6r22z27h6tvur`).
+- ✅ **Blob support**: `com.atproto.repo.uploadBlob` + `com.atproto.sync.getBlob`, blob CID = CIDv1/raw/sha-256.
+- ✅ **Relay strict MST verification**: walk the MST from `commit.data`, rebuild the root, verify every block CID
+  — validated against the 462-node real `repo.car` (rebuilt root == reference `commit.data`). Op-diff is
+  approximated (ops checked against the new tree); full prevData inversion is a follow-up.
+- ✅ **Lexicon → C# codegen**: a tool that turns a record lexicon into a typed C# record (Roslyn compile-checked).
+- ✅ **Multi-target core libs** (`net9.0;net10.0`): the eight core libraries carry both target frameworks; the
+  Aspire integration (`AtProto.Hosting.Atproto`) stays `net10.0`.
+- ⚪ **Deferred**: full **OAuth 2.1 AS** (large, and not self-verifiable without a real browser/client flow) and
+  **publishing to nuget.org** (once the API surface settles).
 
 ---
 
