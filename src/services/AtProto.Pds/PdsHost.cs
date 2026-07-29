@@ -28,6 +28,7 @@ public static class PdsHost
         builder.Services.AddSingleton<PdsIdentity>();
         builder.Services.AddSingleton<FirehoseBroadcaster>();
         builder.Services.AddSingleton<AccountStore>();
+        builder.Services.AddSingleton<BlobStore>();
         builder.Services.AddSingleton<PdsService>();
 
         WebApplication app = builder.Build();
@@ -36,6 +37,7 @@ public static class PdsHost
         MapErrorHandling(app);
         MapServer(app);
         MapRepo(app);
+        MapBlob(app);
         MapSync(app);
         MapIdentity(app);
         return app;
@@ -175,6 +177,42 @@ public static class PdsHost
         });
     }
 
+    private static void MapBlob(WebApplication app)
+    {
+        app.MapPost("/xrpc/com.atproto.repo.uploadBlob", async (HttpContext ctx, PdsService pds, BlobStore blobs) =>
+        {
+            _ = pds.Authenticate(ctx.Request.Headers.Authorization);
+
+            using var body = new MemoryStream();
+            await ctx.Request.Body.CopyToAsync(body, ctx.RequestAborted);
+            string contentType = ctx.Request.ContentType ?? "application/octet-stream";
+            StoredBlob blob = blobs.Put(body.ToArray(), contentType);
+
+            return Results.Ok(new
+            {
+                blob = BlobRef(blob),
+            });
+        });
+
+        app.MapGet("/xrpc/com.atproto.sync.getBlob", (string did, string cid, BlobStore blobs) =>
+        {
+            Cid blobCid;
+            try
+            {
+                blobCid = Cid.Decode(cid);
+            }
+            catch (FormatException ex)
+            {
+                throw new XrpcException(400, "InvalidRequest", ex.Message);
+            }
+
+            if (!blobs.TryGet(blobCid, out StoredBlob? blob))
+                throw new XrpcException(404, "BlobNotFound", $"Blob not found: {cid}");
+
+            return Results.Bytes(blob.Bytes, blob.ContentType);
+        });
+    }
+
     private static void MapSync(WebApplication app)
     {
         app.MapGet("/xrpc/com.atproto.sync.getRepo", (string did, PdsService pds) =>
@@ -274,6 +312,17 @@ public static class PdsHost
                 serviceEndpoint = identity.PublicUrl.ToString().TrimEnd('/'),
             },
         },
+    };
+
+    private static Dictionary<string, object?> BlobRef(StoredBlob blob) => new(StringComparer.Ordinal)
+    {
+        ["$type"] = "blob",
+        ["ref"] = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["$link"] = blob.Cid.ToString(),
+        },
+        ["mimeType"] = blob.ContentType,
+        ["size"] = blob.Size,
     };
 
     private static Account ResolveRepo(PdsService pds, string repo)
