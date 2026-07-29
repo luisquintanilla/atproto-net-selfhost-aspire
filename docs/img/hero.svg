@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a-line" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2a2f4a"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0bd"/></marker><marker id="a-you" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e0b341"/></marker><marker id="a-pds" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4ec97a"/></marker><marker id="a-relay" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c678dd"/></marker><marker id="a-appview" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7aa2ff"/></marker><marker id="a-browser" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#56b6c2"/></marker>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect x="0.75" y="0.75" width="958.5" height="298.5" rx="16" fill="#0f1220" stroke="#2a2f4a" stroke-width="1.5"/>
+  
+  <text x="30" y="70" fill="#e7e9f3" font-size="30" font-weight="750">atproto, self-hosted in .NET</text>
+  <text x="31" y="98" fill="#9aa0bd" font-size="15">Run your own PDS, Relay, and AppView. Watch one 🌤 flow across all three, live.</text><g filter="url(#sh)">
+    <rect x="40" y="150" width="150" height="66" rx="12" fill="#171a2b" stroke="#e0b341" stroke-width="1.5"/>
+    <rect x="40" y="150" width="6" height="66" rx="3" fill="#e0b341"/>
+  </g>
+  <text x="67" y="184" font-size="24" text-anchor="middle" dominant-baseline="central">🧑</text>
+  <text x="86" y="178" fill="#e7e9f3" font-size="15" font-weight="650">You</text>
+  <text x="86" y="196" fill="#9aa0bd" font-size="12"><tspan x="86" dy="0">pick a status</tspan></text><path d="M190 183 L220 183" fill="none" stroke="#4ec97a" stroke-width="2"  marker-end="url(#a-pds)"/><g filter="url(#sh)">
+    <rect x="220" y="150" width="150" height="66" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/>
+    <rect x="220" y="150" width="6" height="66" rx="3" fill="#4ec97a"/>
+  </g>
+  <text x="247" y="184" font-size="24" text-anchor="middle" dominant-baseline="central">🏠</text>
+  <text x="266" y="178" fill="#e7e9f3" font-size="15" font-weight="650">Your PDS</text>
+  <text x="266" y="196" fill="#9aa0bd" font-size="12"><tspan x="266" dy="0">writes + signs</tspan></text><path d="M370 183 L400 183" fill="none" stroke="#c678dd" stroke-width="2"  marker-end="url(#a-relay)"/><g filter="url(#sh)">
+    <rect x="400" y="150" width="150" height="66" rx="12" fill="#171a2b" stroke="#c678dd" stroke-width="1.5"/>
+    <rect x="400" y="150" width="6" height="66" rx="3" fill="#c678dd"/>
+  </g>
+  <text x="427" y="184" font-size="24" text-anchor="middle" dominant-baseline="central">📡</text>
+  <text x="446" y="178" fill="#e7e9f3" font-size="15" font-weight="650">Relay</text>
+  <text x="446" y="196" fill="#9aa0bd" font-size="12"><tspan x="446" dy="0">one firehose</tspan></text><path d="M550 183 L580 183" fill="none" stroke="#7aa2ff" stroke-width="2"  marker-end="url(#a-appview)"/><g filter="url(#sh)">
+    <rect x="580" y="150" width="150" height="66" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/>
+    <rect x="580" y="150" width="6" height="66" rx="3" fill="#7aa2ff"/>
+  </g>
+  <text x="607" y="184" font-size="24" text-anchor="middle" dominant-baseline="central">📰</text>
+  <text x="626" y="178" fill="#e7e9f3" font-size="15" font-weight="650">AppView</text>
+  <text x="626" y="196" fill="#9aa0bd" font-size="12"><tspan x="626" dy="0">indexes it</tspan></text><path d="M730 183 L760 183" fill="none" stroke="#56b6c2" stroke-width="2"  marker-end="url(#a-browser)"/><g filter="url(#sh)">
+    <rect x="760" y="150" width="150" height="66" rx="12" fill="#171a2b" stroke="#56b6c2" stroke-width="1.5"/>
+    <rect x="760" y="150" width="6" height="66" rx="3" fill="#56b6c2"/>
+  </g>
+  <text x="787" y="184" font-size="24" text-anchor="middle" dominant-baseline="central">🖥️</text>
+  <text x="806" y="178" fill="#e7e9f3" font-size="15" font-weight="650">Board</text>
+  <text x="806" y="196" fill="#9aa0bd" font-size="12"><tspan x="806" dy="0">everyone sees</tspan></text><text x="52" y="134" font-size="20">🌤</text><circle cx="36" cy="262" r="6" fill="#4ec97a"/><text x="48" y="266" fill="#9aa0bd" font-size="12">PDS</text><circle cx="95.2" cy="262" r="6" fill="#c678dd"/><text x="107.2" y="266" fill="#9aa0bd" font-size="12">Relay / firehose</text><circle cx="237.60000000000002" cy="262" r="6" fill="#7aa2ff"/><text x="249.60000000000002" y="266" fill="#9aa0bd" font-size="12">AppView</text><circle cx="322.40000000000003" cy="262" r="6" fill="#e0b341"/><text x="334.40000000000003" y="266" fill="#9aa0bd" font-size="12">you / identity</text><circle cx="452.00000000000006" cy="262" r="6" fill="#56b6c2"/><text x="464.00000000000006" y="266" fill="#9aa0bd" font-size="12">board</text>
+</svg>

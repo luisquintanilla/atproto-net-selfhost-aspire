@@ -10,14 +10,14 @@ Working repo name: **`atproto-net-selfhost-aspire`** — standalone git repo at 
 
 ---
 
-## 0. Progress (live status — updated 2026-07-28)
+## 0. Progress (live status — updated 2026-07-29)
 
 **Autopilot lane `M0 → T0 → M1 → M2 → M3 → M4 → M5` is COMPLETE and verified. The full three-tier self-hosted
 stack (our PDS → our Relay → AppView presence board) runs end-to-end under `aspire run`, now declared with the
 **"native" `AtProto.Hosting.Atproto` integration** (`AddAtprotoPds/Relay/AppView` + `WithUpstream`/`WithFirehose`/
 `WithCollection`) so the AppHost is a short declarative chain. A StatusSeeder writes live
 `place.selfhost.status` records that flow PDS→Relay→AppView and light up the board with decoded emoji.
-Remaining: M6 (stretch — federation discovery, did:plc, OAuth, packaging).**
+Remaining: M6 (stretch — federation discovery, did:plc, OAuth, nuget.org publish).**
 
 | Phase | Status | Commit | Evidence |
 |-------|--------|--------|----------|
@@ -32,8 +32,9 @@ Remaining: M6 (stretch — federation discovery, did:plc, OAuth, packaging).**
 | **M4** our own Relay (crawl · global seq · re-emit) | ✅ done | `89d7fba` | `AtProto.Relay` crawls the upstream PDS, assigns a **global** seq via `FirehoseBroadcaster.PublishNext`, re-emits `subscribeRepos`; lenient validate (DID + rev-monotonic); `listHosts`/`getRepoStatus`/`getRepo`-redirect; per-host cursor + global-seq persisted across restart. **Live under `aspire run`**: PDS→**Relay**→AppView — relay `active` (lastUpstreamSeq 1510), AppView `lastSeq` tracks the relay's global seq, board 6 users w/ emoji, relay tracks per-repo rev. **Pds.Tests 7/7** incl. `RelayLoopTests` (full loop + restart-resume: no reset, no reprocess) |
 | **M5** Aspire "native" integrations | ✅ done | *(this change)* | `AtProto.Hosting.Atproto`: `AddAtprotoPds/Relay/AppView<TProject>` + `WithUpstream`/`WithFirehose`/`WithCollection` encode the env-var wiring contract so the AppHost collapses to a **declarative chain** (relay auto-crawls the pds, appview auto-subscribes the relay). Referenced with `IsAspireProjectResource="false"` (a hosting lib, not a service). **Live under `aspire run`** via the refactored AppHost: same working PDS→Relay→AppView board (6 users, emoji, global seq persisted *across* runs). **Hosting.Tests 1/1** asserts the topology (wait-ordering + `Pds__PublicUrl`/`Relay__Upstreams__0`/`Firehose__Url`/`AppView__Collection`) |
 | M6 stretch | ⚪ deferred | — | live reactive UI (SignalR) landed ✅ (see below); rest not in autopilot run |
+| **Explorer + docs + preview packages** | ✅ done | *(this change)* | **Feel-real explorer**: inspect the real record (AT-URI · JSON · CID), the repo (DID doc · signed commit · records), and a CARv1 download, plus **compose your own status** and a **live firehose ticker** — all single-origin via a did:web→PDS resolver in the AppView. **Rich SVG docs**: a newcomer-first docs set (primer/how-it-works/architecture/reactive/services/scenarios/packaging) with **15 hand-authored SVG diagrams** from a checked-in generator. **Preview packages**: nine reusable libs gated by `IsPackable` (core + `AtProto.Hosting.Atproto`), MIT + README + SourceLink, produced by a `dotnet pack` CI job (no nuget.org). **Live under `aspire run`**: `POST /compose 🌤` flowed PDS→Relay→AppView and lit the board; `/inspect/record\|repo\|car` returned the real record, the DID doc + signed commit (`rev 3mrshzy…`), and a 563-byte CARv1. **AppView 28/28** incl. resolver/inspect/compose suites |
 
-**Totals:** 64/64 tests green (Fixtures 5, Core 38, Firehose 5, AppView 8, Pds 7, Hosting 1). Reactive layering
+**Totals:** 84/84 tests green (Fixtures 5, Core 38, Firehose 5, AppView 28, Pds 7, Hosting 1). Reactive layering
 held exactly as decided (§2a): BCL pull ingest everywhere; Rx.NET scoped to the AppView projection only — and now
 pushed all the way to the browser (see the live-UI note).
 
@@ -60,8 +61,8 @@ per-row flash — no polling. So the full chain is now `firehose IObservable →
 2068→2069→2070). Test: `PresenceProjectionTests.Changes_publishes_one_delta_per_update…` (AppView 8/8).
 **Next action:** the autopilot lane is done through M5, plus the live reactive UI. Optional **M6** (stretch —
 federation discovery via a
-service-advertisement record + `requestCrawl` announce, did:plc, OAuth AS, Relay strict MST inversion, NuGet
-packaging of the core libs + the Aspire integration).
+service-advertisement record + `requestCrawl` announce, did:plc, OAuth AS, Relay strict MST inversion, and
+publishing the preview libraries to nuget.org once the API surface settles).
 
 ---
 

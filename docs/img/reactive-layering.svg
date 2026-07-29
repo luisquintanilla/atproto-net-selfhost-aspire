@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="308" viewBox="0 0 980 308" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a-line" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2a2f4a"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0bd"/></marker><marker id="a-you" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e0b341"/></marker><marker id="a-pds" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4ec97a"/></marker><marker id="a-relay" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c678dd"/></marker><marker id="a-appview" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7aa2ff"/></marker><marker id="a-browser" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#56b6c2"/></marker>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect x="0.75" y="0.75" width="978.5" height="306.5" rx="16" fill="#0f1220" stroke="#2a2f4a" stroke-width="1.5"/>
+  
+  <text x="30" y="60" fill="#e7e9f3" font-size="20" font-weight="700">Reactive layering</text>
+  <text x="31" y="80" fill="#9aa0bd" font-size="13">Pull where correctness needs backpressure; push where fan-out is cheap.</text><g filter="url(#sh)">
+    <rect x="24" y="118" width="150" height="96" rx="12" fill="#171a2b" stroke="#c678dd" stroke-width="1.5"/>
+    <rect x="24" y="118" width="6" height="96" rx="3" fill="#c678dd"/>
+  </g>
+  <text x="51" y="167" font-size="24" text-anchor="middle" dominant-baseline="central">📡</text>
+  <text x="70" y="161" fill="#e7e9f3" font-size="15" font-weight="650">Firehose</text>
+  <text x="70" y="179" fill="#9aa0bd" font-size="12"><tspan x="70" dy="0">WebSocket</tspan><tspan x="70" dy="15">frames</tspan></text><path d="M174 166 L200 166" fill="none" stroke="#4ec97a" stroke-width="2"  marker-end="url(#a-pds)"/><g filter="url(#sh)">
+    <rect x="200" y="118" width="196" height="96" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/>
+    <rect x="200" y="118" width="6" height="96" rx="3" fill="#4ec97a"/>
+  </g>
+  <text x="227" y="167" font-size="24" text-anchor="middle" dominant-baseline="central">⤵️</text>
+  <text x="246" y="161" fill="#e7e9f3" font-size="15" font-weight="650">Pull ingest</text>
+  <text x="246" y="179" fill="#9aa0bd" font-size="12"><tspan x="246" dy="0">IAsyncEnumerable +</tspan><tspan x="246" dy="15">bounded Channel (Wait)</tspan></text><path d="M396 166 L422 166" fill="none" stroke="#9aa0bd" stroke-width="2"  marker-end="url(#a-muted)"/><g filter="url(#sh)">
+    <rect x="422" y="118" width="196" height="96" rx="12" fill="#171a2b" stroke="#9aa0bd" stroke-width="1.5"/>
+    <rect x="422" y="118" width="6" height="96" rx="3" fill="#9aa0bd"/>
+  </g>
+  <text x="449" y="167" font-size="24" text-anchor="middle" dominant-baseline="central">🔌</text>
+  <text x="468" y="161" fill="#e7e9f3" font-size="15" font-weight="650">IObservable seam</text>
+  <text x="468" y="179" fill="#9aa0bd" font-size="12"><tspan x="468" dy="0">no Rx dependency here</tspan></text><path d="M618 166 L644 166" fill="none" stroke="#7aa2ff" stroke-width="2"  marker-end="url(#a-appview)"/><g filter="url(#sh)">
+    <rect x="644" y="118" width="150" height="96" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/>
+    <rect x="644" y="118" width="6" height="96" rx="3" fill="#7aa2ff"/>
+  </g>
+  <text x="671" y="167" font-size="24" text-anchor="middle" dominant-baseline="central">⚙️</text>
+  <text x="690" y="161" fill="#e7e9f3" font-size="15" font-weight="650">Rx projection</text>
+  <text x="690" y="179" fill="#9aa0bd" font-size="12"><tspan x="690" dy="0">GroupBy ·</tspan><tspan x="690" dy="15">Replay(1) ·</tspan><tspan x="690" dy="15">Buffer</tspan></text><path d="M794 166 L820 166" fill="none" stroke="#56b6c2" stroke-width="2"  marker-end="url(#a-browser)"/><g filter="url(#sh)">
+    <rect x="820" y="118" width="138" height="96" rx="12" fill="#171a2b" stroke="#56b6c2" stroke-width="1.5"/>
+    <rect x="820" y="118" width="6" height="96" rx="3" fill="#56b6c2"/>
+  </g>
+  <text x="847" y="167" font-size="24" text-anchor="middle" dominant-baseline="central">📤</text>
+  <text x="866" y="161" fill="#e7e9f3" font-size="15" font-weight="650">SignalR</text>
+  <text x="866" y="179" fill="#9aa0bd" font-size="12"><tspan x="866" dy="0">push to</tspan><tspan x="866" dy="15">browsers</tspan></text><path d="M298 222 L298 236" stroke="#4ec97a" stroke-width="1.5"/><text x="200" y="254" fill="#4ec97a" font-size="12">backpressure lives here (bounded channel)</text><path d="M889 222 L889 236" stroke="#56b6c2" stroke-width="1.5"/><text x="720" y="254" fill="#56b6c2" font-size="12">pure fan-out (no backpressure)</text>
+</svg>

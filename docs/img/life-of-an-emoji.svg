@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="250" viewBox="0 0 980 250" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a-line" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2a2f4a"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0bd"/></marker><marker id="a-you" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e0b341"/></marker><marker id="a-pds" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4ec97a"/></marker><marker id="a-relay" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c678dd"/></marker><marker id="a-appview" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7aa2ff"/></marker><marker id="a-browser" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#56b6c2"/></marker>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect x="0.75" y="0.75" width="978.5" height="248.5" rx="16" fill="#0f1220" stroke="#2a2f4a" stroke-width="1.5"/>
+  
+  <text x="30" y="60" fill="#e7e9f3" font-size="20" font-weight="700">The life of an emoji</text>
+  <text x="31" y="80" fill="#9aa0bd" font-size="13">One 🌤, from your click to everyone's board.</text><g filter="url(#sh)"><rect x="20" y="92" width="168" height="96" rx="12" fill="#171a2b" stroke="#e0b341" stroke-width="1.5"/><rect x="20" y="92" width="168" height="6" rx="3" fill="#e0b341"/></g>
+    <circle cx="38" cy="118" r="12" fill="#1e2238" stroke="#e0b341"/><text x="38" y="122" fill="#e7e9f3" font-size="12" text-anchor="middle">1</text>
+    <text x="170" y="126" font-size="24" text-anchor="middle">🧑</text>
+    <text x="36" y="152" fill="#e7e9f3" font-size="14" font-weight="650">You pick 🌤</text>
+    <text x="36" y="170" fill="#9aa0bd" font-size="12"><tspan x="36" dy="0">click a status</tspan></text><path d="M188 140 L213 140" fill="none" stroke="#4ec97a" stroke-width="2"  marker-end="url(#a-pds)"/><g filter="url(#sh)"><rect x="213" y="92" width="168" height="96" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/><rect x="213" y="92" width="168" height="6" rx="3" fill="#4ec97a"/></g>
+    <circle cx="231" cy="118" r="12" fill="#1e2238" stroke="#4ec97a"/><text x="231" y="122" fill="#e7e9f3" font-size="12" text-anchor="middle">2</text>
+    <text x="363" y="126" font-size="24" text-anchor="middle">🏠</text>
+    <text x="229" y="152" fill="#e7e9f3" font-size="14" font-weight="650">PDS writes it</text>
+    <text x="229" y="170" fill="#9aa0bd" font-size="12"><tspan x="229" dy="0">signs a commit</tspan></text><path d="M381 140 L406 140" fill="none" stroke="#4ec97a" stroke-width="2"  marker-end="url(#a-pds)"/><g filter="url(#sh)"><rect x="406" y="92" width="168" height="96" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/><rect x="406" y="92" width="168" height="6" rx="3" fill="#4ec97a"/></g>
+    <circle cx="424" cy="118" r="12" fill="#1e2238" stroke="#4ec97a"/><text x="424" y="122" fill="#e7e9f3" font-size="12" text-anchor="middle">3</text>
+    <text x="556" y="126" font-size="24" text-anchor="middle">📢</text>
+    <text x="422" y="152" fill="#e7e9f3" font-size="14" font-weight="650">#commit</text>
+    <text x="422" y="170" fill="#9aa0bd" font-size="12"><tspan x="422" dy="0">onto the firehose</tspan></text><path d="M574 140 L599 140" fill="none" stroke="#c678dd" stroke-width="2"  marker-end="url(#a-relay)"/><g filter="url(#sh)"><rect x="599" y="92" width="168" height="96" rx="12" fill="#171a2b" stroke="#c678dd" stroke-width="1.5"/><rect x="599" y="92" width="168" height="6" rx="3" fill="#c678dd"/></g>
+    <circle cx="617" cy="118" r="12" fill="#1e2238" stroke="#c678dd"/><text x="617" y="122" fill="#e7e9f3" font-size="12" text-anchor="middle">4</text>
+    <text x="749" y="126" font-size="24" text-anchor="middle">📡</text>
+    <text x="615" y="152" fill="#e7e9f3" font-size="14" font-weight="650">Relay</text>
+    <text x="615" y="170" fill="#9aa0bd" font-size="12"><tspan x="615" dy="0">adds a global seq</tspan></text><path d="M767 140 L792 140" fill="none" stroke="#7aa2ff" stroke-width="2"  marker-end="url(#a-appview)"/><g filter="url(#sh)"><rect x="792" y="92" width="168" height="96" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/><rect x="792" y="92" width="168" height="6" rx="3" fill="#7aa2ff"/></g>
+    <circle cx="810" cy="118" r="12" fill="#1e2238" stroke="#7aa2ff"/><text x="810" y="122" fill="#e7e9f3" font-size="12" text-anchor="middle">5</text>
+    <text x="942" y="126" font-size="24" text-anchor="middle">📰</text>
+    <text x="808" y="152" fill="#e7e9f3" font-size="14" font-weight="650">AppView</text>
+    <text x="808" y="170" fill="#9aa0bd" font-size="12"><tspan x="808" dy="0">latest-wins</tspan></text><text x="20" y="228" fill="#9aa0bd" font-size="13">6. Every open board flashes 🌤 within a quarter second — pushed live over SignalR.</text>
+</svg>

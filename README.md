@@ -1,149 +1,141 @@
 # atproto-net-selfhost-aspire
 
-A from-scratch **.NET** mono-repo that implements the [AT Protocol](https://atproto.com) (atproto)
-core services - **PDS**, **Relay**, and **AppView** - and wires them together with
-**.NET Aspire** so you can *host your own atproto stack*.
+A from-scratch .NET stack for self-hosting atproto: your data home, a shared wire, and a live AppView, all wired with .NET Aspire.
 
-The end goal: each service becomes a reusable **component** you plug in as a native Aspire
-integration (`builder.AddAtprotoPds()`, `.AddAtprotoRelay()`, `.AddAtprotoAppView()`) — which the
-AppHost already does today.
+## What is this?
 
-> Status: the full self-hosted **PDS → Relay → AppView** stack runs under `aspire run`, declared
-> through the "native" `AtProto.Hosting.Atproto` integration, and the presence board updates **live
-> over SignalR** (the Rx projection pushed straight to the browser). Milestones **M0–M5** are done;
-> **M6** (federation, did:plc, OAuth, packaging) is the remaining stretch. See the roadmap below.
+atproto is easiest to picture as **email + a newswire + a newspaper**. Your **Personal Data Server (PDS)** is like your email provider, your data lives there and you can switch providers. The **Relay** is like a newswire that aggregates public activity into one feed, the **firehose**. The **AppView** is like a newspaper or search index that reads the wire and builds something readable.
 
-## Why this exists
+This repo implements the core services in .NET: a Personal Data Server (PDS), a Relay, and an AppView. The demo app is a presence board where accounts set one emoji status and everyone sees the latest statuses update live over SignalR.
 
-atproto has a common shape: user repositories live on **PDSes**, a **Relay** aggregates their
-events into a firehose, and an **AppView** indexes that firehose into something clients can query.
-That maps cleanly onto reactive dataflow in .NET, so the design uses:
+![atproto self-hosted in .NET: you to your PDS to the Relay to the AppView to the board](docs/img/hero.svg)
 
-- **BCL reactive primitives** (`IAsyncEnumerable<T>`, `System.Threading.Channels`,
-  the `IObservable<T>` interface) as the ingest backbone - ordered, at-least-once, backpressured.
-- **Rx.NET v7** as an opt-in projection layer, scoped to the AppView read models.
-- **.NET Aspire** to orchestrate the services and expose them as pluggable integrations.
+*Figure: PDSes hold user data, the Relay aggregates public commits, and the AppView builds the live board.*
 
-## Reactive layering (the one design rule)
+## The life of an emoji
 
-- **Ingest hot path = pull.** PDS, Relay, and the firehose client use `IAsyncEnumerable<T>` plus a
-  bounded `Channel` (`FullMode.Wait`). Rx has no backpressure, so it is not used here.
-- **Seam = the BCL `IObservable<T>` interface.** The firehose library hands back
-  `IObservable<RepoEvent>` via a tiny adapter and takes **no `System.Reactive` dependency**.
-- **Projection = push.** Only the AppView (and samples) reference **Rx.NET v7** for
-  `GroupBy`/`Replay(1)`/`Buffer`/`Throttle` read-model algebra — and that push now reaches the
-  browser: a `PresenceBroadcaster` forwards the projection's live `Changes` + `Stats` over
-  **SignalR** to the presence board, so the board updates from server-driven deltas (no polling).
-  The full chain is `firehose IObservable → Rx projection → IObserver → SignalR → browser`.
+You pick 🌤. The app writes one `place.selfhost.status` record with key `self` to your PDS. The PDS signs a repo commit and emits a `#commit` frame, the Relay assigns a global sequence, the AppView projects latest status per account, and SignalR makes the row flash on everyone's board.
 
-## Layout
+Read the full walkthrough in [docs/how-it-works.md](docs/how-it-works.md).
 
-```
-src/
-  core/      AtProto.Cbor · Cid · Car · Repo (MST) · Identity · Lexicon · Xrpc · Firehose
-  services/  AtProto.Pds · AtProto.Relay · AtProto.AppView
-  apps/      AtProto.FirehoseProbe (diagnostic worker)
-  aspire/    AtProto.AppHost · AtProto.ServiceDefaults · AtProto.Hosting.Atproto
-  samples/   StatusWeb
-lexicons/    custom lexicon JSON (the demo status record)
-tests/       core interop vectors · firehose · integration
-docs/        architecture notes and ADRs
-```
+## Quickstart
 
-## Host your own stack (the AppHost)
+### Prerequisites
 
-The whole point: standing up a self-hosted atproto stack is a short declarative chain. The AppHost
-uses the `AtProto.Hosting.Atproto` integration — the env-var wiring contract lives in the library,
-not the AppHost:
+- .NET SDK 10.0.300, pinned in [global.json](global.json).
+- .NET Aspire CLI 13.x.
+- A single valid HTTPS dev certificate.
 
-```csharp
-var pds = builder.AddAtprotoPds<Projects.AtProto_Pds>("pds");
-
-var relay = builder.AddAtprotoRelay<Projects.AtProto_Relay>("relay")
-    .WithUpstream(pds);                       // relay auto-crawls the pds firehose
-
-builder.AddAtprotoAppView<Projects.AtProto_AppView>("appview")
-    .WithFirehose(relay)                      // appview auto-subscribes the relay
-    .WithCollection("place.selfhost.status"); // and indexes this collection
-```
-
-## Prerequisites
-
-- .NET SDK **10.0.300** (pinned in `global.json`)
-- .NET Aspire CLI (`aspire`) 13.x
-- A **single, valid HTTPS dev certificate** (the Aspire dashboard binds HTTPS). On a fresh
-  machine — and especially on **WSL** — run this once:
-
-  ```bash
-  dotnet dev-certs https --clean   # remove any stale/duplicate localhost certs
-  dotnet dev-certs https --trust   # generate one cert (trust "partially fails" on WSL — that's fine)
-  ```
-
-  > Why: if **multiple** dev certs exist (or none), Kestrel can't cleanly bind the dashboard's
-  > HTTPS endpoints and `aspire run` aborts early with a `TaskCanceledException` at
-  > `KestrelServerImpl.BindAsync` (process exit code 134). One valid cert fixes it; the WSL
-  > "trust partially failed" warning only affects the browser padlock, not binding.
-
-## Build & run
+Run this once on a fresh machine:
 
 ```bash
-# build everything
-dotnet build atproto-net-selfhost-aspire.slnx
+dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+```
 
-# run the orchestrated self-hosted stack (dashboard + services)
+Then run the orchestrated stack:
+
+```bash
 aspire run --project src/aspire/AtProto.AppHost
 ```
 
-`aspire run` boots the Aspire dashboard (watch the console for the
-`https://localhost:17046/login?t=…` URL) and the full three-tier **self-hosted loop**: our own
-**PDS** (`did:web`), our own **Relay** (crawls the PDS firehose, assigns a global sequence, and
-re-emits an aggregated `subscribeRepos`), the **AppView** presence board subscribed to the *relay*,
-a **StatusSeeder** that registers a handful of demo accounts and writes live
-`place.selfhost.status` records, and the **FirehoseProbe**. Within seconds the board fills with
-self-authored data flowing **PDS → Relay → AppView** — open the `appview` resource from the
-dashboard, or hit `/xrpc/place.selfhost.getPresence` / `getStats` on its assigned port. Each row
-shows the account DID and its latest **emoji**, decoded from the commit's CAR slice (latest-wins
-per account). The relay's own surface is live too: `/xrpc/com.atproto.sync.listHosts` and
-`getRepoStatus?did=…` on the `relay` port.
+On Windows Subsystem for Linux (WSL), use the all-HTTP launch profile. The Aspire HTTPS dashboard bind can fail under WSL even when a dev cert exists, so this path is the most reliable:
 
-> **WSL: use the all-HTTP launch profile.** The Aspire dashboard binds HTTPS by default, which can
-> fail to bind under WSL even with a valid dev cert (`aspire run` aborts with a
-> `TaskCanceledException` at `KestrelServerImpl.BindAsync`, exit code 134). The reliable fix is the
-> repo's `http` launch profile (dashboard + OTLP + resource-service all over HTTP):
-> ```bash
-> ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
->   dotnet run --project src/aspire/AtProto.AppHost/AtProto.AppHost.csproj --launch-profile http
-> ```
-> The dashboard then comes up on `http://localhost:15194`; service ports are proxied by DCP
-> (e.g. PDS on `:5271`, Relay on `:5333`, AppView on `:5193`).
+```bash
+ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
+  dotnet run --project src/aspire/AtProto.AppHost/AtProto.AppHost.csproj --launch-profile http
+```
 
-To run just the board without the dashboard: `dotnet run --project src/services/AtProto.AppView`
-(→ http://localhost:5193). By default it points at the **public** Bluesky relay (set
-`Firehose__Url` to point it at a self-hosted PDS/relay instead).
+HTTP profile ports:
+
+| Service | URL |
+| --- | --- |
+| Aspire dashboard | `http://localhost:15194` |
+| PDS | `http://localhost:5271` |
+| Relay | `http://localhost:5333` |
+| AppView board | `http://localhost:5193` |
+
+## What you can do
+
+- Watch the live presence board update from self-hosted demo accounts.
+- Compose your own 🌤 status through the app explorer.
+- Click a row to inspect the real record, its AT-URI, and its Content Identifier (CID).
+- Explore a repo and download its Content Addressable aRchive (CAR) file.
+- Watch raw firehose commits flow through the live ticker.
+- Query the PDS, Relay, and AppView typed HTTP endpoints (XRPC) directly.
+
+Example record:
+
+```json
+{
+  "$type": "place.selfhost.status",
+  "status": "🌤",
+  "createdAt": "2026-07-29T16:00:00.000Z"
+}
+```
+
+Example AT-URI:
+
+```text
+at://did:web:localhost%3A5271:pds:demo1/place.selfhost.status/self
+```
+
+## Who is this for?
+
+- .NET developers who want to learn atproto without starting from a TypeScript stack.
+- People exploring self-hosted personal data and portable identity.
+- Teams that want an internal "who's around" presence board on infrastructure they control.
+- Protocol builders who need a small reference and interop harness.
+
+See [docs/scenarios.md](docs/scenarios.md).
+
+## Documentation
+
+Start here:
+
+1. [Primer](docs/primer.md), atproto in plain language.
+2. [How it works](docs/how-it-works.md), the life of a 🌤 status.
+3. [Architecture](docs/architecture.md), exact service wiring.
+4. [Reactive design](docs/reactive-design.md), pull ingest, `IObservable` seam, Rx projection, SignalR push.
+5. [Services](docs/services.md), endpoint and config reference.
+6. [Scenarios](docs/scenarios.md), why this exists and where it fits.
+7. [Packaging](docs/packaging.md), the extractable libraries and how preview packages are built.
+
+The dense implementation log is [docs/plan.md](docs/plan.md).
+
+## Layout
+
+```text
+src/
+  core/      AtProto.Cbor · Cid · Car · Crypto · Repo · Identity · Lexicon · Firehose
+  services/  AtProto.Pds · AtProto.Relay · AtProto.AppView
+  apps/      AtProto.FirehoseProbe · AtProto.StatusSeeder
+  aspire/    AtProto.AppHost · AtProto.ServiceDefaults · AtProto.Hosting.Atproto
+lexicons/    custom lexicon JSON for the demo status record
+tests/       core interop vectors, firehose, integration, hosting
+docs/        newcomer docs and implementation notes
+```
 
 ## Roadmap
 
 The build is phased. Each milestone is independently demoable.
 
-- **M0** - repo bootstrap and Aspire skeleton *(done)*
-- **T0** - golden-vectors fixture harness (real repo CARs/CIDs/MST roots, frozen for tests) *(done)*
-- **M1** - reactive firehose core, validated live against the public Bluesky relay *(done)*
-- **M2** - AppView "presence board" over the public firehose (emoji status, latest-wins) *(done)*
-- **M3** - our own PDS (`did:web`), MST build + commit signing + CAR write *(done — self-hosted PDS → AppView loop runs under `aspire run`)*
-- **M4** - our own Relay (aggregate PDS firehoses, global sequence) *(done — full **PDS → Relay → AppView** loop runs under `aspire run`)*
-- **M5** - Aspire orchestration + custom "native" integrations *(done — the AppHost declares the stack with `AddAtprotoPds/Relay/AppView` + `WithUpstream/WithFirehose/WithCollection`)*
-- **M6** - stretch: federation discovery, did:plc, OAuth, packaging
+- **M0** - repo bootstrap and Aspire skeleton, done.
+- **T0** - golden-vectors fixture harness with real repo CARs, CIDs, and MST roots, done.
+- **M1** - reactive firehose core, validated against the public Bluesky relay, done.
+- **M2** - AppView presence board over the public firehose, done.
+- **M3** - self-hosted PDS with `did:web`, MST build, commit signing, CAR write, and XRPC endpoints, done.
+- **M4** - self-hosted Relay with upstream crawl, global sequence, and aggregated firehose, done.
+- **M5** - Aspire orchestration plus native hosting integrations, done.
+- **Live SignalR UI** - board updates from server-driven projection deltas, done.
+- **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and nine extractable preview NuGet packages, done.
+- **M6 stretch** - federation discovery, `did:plc`, OAuth, stricter Relay validation, and publishing the libraries to nuget.org once the API surface settles.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE) — permissive: anyone may use, modify, and
-redistribute it (including commercially), with no copyleft, provided the copyright and license notice
-are retained.
+This project is licensed under the [MIT License](LICENSE), permissive: anyone may use, modify, and redistribute it, including commercially, with no copyleft, provided the copyright and license notice are retained.
 
 **Third-party:**
-- The bundled SignalR browser client (`src/services/AtProto.AppView/wwwroot/lib/signalr/signalr.min.js`)
-  is part of ASP.NET Core, © .NET Foundation and Contributors, MIT — see its
-  [`LICENSE.txt`](src/services/AtProto.AppView/wwwroot/lib/signalr/LICENSE.txt).
-- The golden test fixtures under `tests/fixtures/` are **public** AT Protocol data captured from the
-  `atproto.com` reference account (`did:plc:ewvi7nxzyoun6zhxrhs64oiz`); see
-  [`tests/fixtures/README.md`](tests/fixtures/README.md).
+
+- The bundled SignalR browser client (`src/services/AtProto.AppView/wwwroot/lib/signalr/signalr.min.js`) is part of ASP.NET Core, © .NET Foundation and Contributors, MIT, see its [`LICENSE.txt`](src/services/AtProto.AppView/wwwroot/lib/signalr/LICENSE.txt).
+- The golden test fixtures under `tests/fixtures/` are public AT Protocol data captured from the `atproto.com` reference account (`did:plc:ewvi7nxzyoun6zhxrhs64oiz`), see [`tests/fixtures/README.md`](tests/fixtures/README.md).
