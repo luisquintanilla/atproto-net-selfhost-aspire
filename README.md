@@ -136,4 +136,14 @@ The build is phased. Each milestone is independently demoable.
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the [MIT License](LICENSE) — permissive: anyone may use, modify, and
+redistribute it (including commercially), with no copyleft, provided the copyright and license notice
+are retained.
+
+**Third-party:**
+- The bundled SignalR browser client (`src/services/AtProto.AppView/wwwroot/lib/signalr/signalr.min.js`)
+  is part of ASP.NET Core, © .NET Foundation and Contributors, MIT — see its
+  [`LICENSE.txt`](src/services/AtProto.AppView/wwwroot/lib/signalr/LICENSE.txt).
+- The golden test fixtures under `tests/fixtures/` are **public** AT Protocol data captured from the
+  `atproto.com` reference account (`did:plc:ewvi7nxzyoun6zhxrhs64oiz`); see
+  [`tests/fixtures/README.md`](tests/fixtures/README.md).
