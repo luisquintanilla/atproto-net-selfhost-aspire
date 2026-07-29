@@ -31,8 +31,10 @@
     <Project Path="tests/AtProto.Pds.Tests/AtProto.Pds.Tests.csproj" />
     <Project Path="tests/AtProto.Hosting.Tests/AtProto.Hosting.Tests.csproj" />
     <Project Path="tests/AtProto.Relay.Tests/AtProto.Relay.Tests.csproj" />
+    <Project Path="tests/AtProto.Lexicon.CodeGen.Tests/AtProto.Lexicon.CodeGen.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/AtProto.Fixtures.Tool/AtProto.Fixtures.Tool.csproj" />
+    <Project Path="tools/AtProto.Lexicon.CodeGen/AtProto.Lexicon.CodeGen.csproj" />
   </Folder>
 </Solution>
