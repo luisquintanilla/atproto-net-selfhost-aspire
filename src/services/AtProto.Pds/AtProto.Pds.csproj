@@ -16,4 +16,9 @@
     <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+  <!-- Durable "production" profile store. In-memory stays the default; see PdsOptions.Storage. -->
+  <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
 </Project>

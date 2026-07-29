@@ -7,6 +7,18 @@
     <!-- Core codecs -->
     <PackageVersion Include="System.Formats.Cbor" Version="10.0.8" />
 
+    <!-- Durable PDS store (production profile; AtProto.Pds only) -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <!-- Pin the bundled SQLite native lib past CVE-2025-6965 (GHSA-2m69-gcr7-jv3q, fixed in 3.50.2+).
+         Transitive pinning (Directory.Build.props) overrides the 2.1.11 native lib Microsoft.Data.Sqlite pulls. -->
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+
+    <!-- DuckDB analytics AppView (production profile; AtProto.AnalyticsView opens the embedded DB in
+         process). The CommunityToolkit DuckDB *hosting* resource targets a newer Aspire (>= 13.4.3)
+         than this stack pins (13.0.2), so the AppHost injects the DuckDB path via plain Aspire config
+         instead - same runtime behavior, one Aspire version, no beta hosting dependency. -->
+    <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.5" />
+
     <!-- Reactive projection layer (AppView only; see plan §2a) -->
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
 

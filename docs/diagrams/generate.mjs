@@ -531,6 +531,67 @@ D["extensibility"] = () => {
   return frame(w, h, b, "extensibility map");
 };
 
+
+// 18. Two AppViews over one firehose - same stream, different query shapes.
+D["two-appviews"] = () => {
+  const w = 980, h = 420;
+  let b = `<text x="30" y="58" fill="${C.text}" font-size="21" font-weight="700">Two AppViews over one firehose</text>
+  <text x="31" y="80" fill="${C.muted}" font-size="13">One Relay stream can feed multiple projections, each with the store its query shape needs.</text>`;
+  b += card(40, 180, 210, 70, { color: C.relay, icon: "📡", title: "Relay firehose", sub: "one ordered event stream" });
+  b += pill(286, 200, "same #commit frames", C.relay);
+
+  b += card(390, 108, 210, 70, { color: C.appview, icon: "📰", title: "Presence AppView", sub: "latest status per DID" });
+  b += card(650, 108, 190, 70, { color: C.appview, icon: "🗂️", title: "in-memory KV", sub: "latest-wins point lookups" });
+  b += card(650, 242, 190, 70, { color: C.you, icon: "🦆", title: "DuckDB", sub: "columnar OLAP aggregates" });
+  b += card(390, 242, 210, 70, { color: C.appview, icon: "📊", title: "Analytics AppView", sub: "activity and repo stats" });
+  b += card(870, 108, 88, 70, { color: C.browser, icon: "🖥️", title: "Board", sub: "presence", titleSize: 13 });
+  b += card(870, 242, 88, 70, { color: C.browser, icon: "📈", title: "Stats", sub: "top repos", titleSize: 13 });
+
+  b += arrow(250, 215, 390, 143, { color: "relay", label: "subscribe" });
+  b += arrow(250, 215, 390, 277, { color: "relay", label: "subscribe" });
+  b += arrow(600, 143, 650, 143, { color: "appview" });
+  b += arrow(600, 277, 650, 277, { color: "appview" });
+  b += arrow(840, 143, 870, 143, { color: "browser" });
+  b += arrow(840, 277, 870, 277, { color: "browser" });
+
+  b += `<text x="390" y="363" fill="${C.muted}" font-size="12.5">Same event stream, two materialized views: point-lookup KV for the board, aggregate OLAP for analytics.</text>`;
+  b += legend(30, 394, [["relay / firehose", C.relay], ["appview", C.appview], ["analytics store", C.you], ["browser", C.browser]]);
+  return frame(w, h, b, "projection fan-out");
+};
+
+// 19. Storage profiles - same code, one profile toggle.
+D["storage-profiles"] = () => {
+  const w = 980, h = 430;
+  let b = `<text x="30" y="58" fill="${C.text}" font-size="21" font-weight="700">Storage profiles</text>
+  <text x="31" y="80" fill="${C.muted}" font-size="13">In-memory stays the default. Production opts into durable PDS stores and analytics with one env var.</text>`;
+
+  const panel = (x, y, title, sub, color) =>
+    `<g filter="url(#sh)"><rect x="${x}" y="${y}" width="430" height="286" rx="16" fill="${C.panel}" stroke="${color}" stroke-width="1.5"/></g>` +
+    `<text x="${x + 22}" y="${y + 34}" fill="${C.text}" font-size="18" font-weight="700">${esc(title)}</text>` +
+    `<text x="${x + 22}" y="${y + 55}" fill="${C.muted}" font-size="12.5">${esc(sub)}</text>`;
+
+  b += panel(30, 104, "dev (default)", "zero config, nothing on disk", C.pds);
+  b += panel(520, 104, "production", "ATPROTO_PROFILE=production", C.you);
+  b += arrow(450, 246, 520, 246, { color: "you", label: "same code + env var" });
+
+  b += card(58, 188, 170, 60, { color: C.pds, icon: "🏠", title: "PDS stores", sub: "accounts · repos · blobs" });
+  b += card(260, 188, 150, 60, { color: C.pds, icon: "🧠", title: "memory", sub: "resets on restart" });
+  b += card(146, 286, 178, 60, { color: C.appview, icon: "🖥️", title: "presence board", sub: "latest-wins only" });
+  b += arrow(228, 218, 260, 218, { color: "pds" });
+  b += arrow(335, 248, 250, 286, { color: "appview" });
+
+  b += card(548, 178, 170, 60, { color: C.pds, icon: "🏠", title: "PDS stores", sub: "accounts · repos · blobs" });
+  b += card(750, 178, 158, 60, { color: C.pds, icon: "🗄️", title: "SQLite", sub: "survives restart" });
+  b += card(548, 282, 170, 60, { color: C.appview, icon: "🖥️", title: "presence board", sub: "latest-wins" });
+  b += card(750, 282, 158, 60, { color: C.you, icon: "🦆", title: "DuckDB", sub: "analytics AppView" });
+  b += arrow(718, 208, 750, 208, { color: "pds" });
+  b += arrow(640, 238, 640, 282, { color: "appview" });
+  b += arrow(718, 312, 750, 312, { color: "you" });
+
+  b += `<text x="30" y="404" fill="${C.muted}" font-size="12.5">Default dev is disposable and fast; production keeps PDS data durable and adds the DuckDB read model for aggregate queries.</text>`;
+  return frame(w, h, b, "dev vs production");
+};
+
 // ---- emit ----------------------------------------------------------------------------
 let count = 0;
 for (const [name, build] of Object.entries(D)) {

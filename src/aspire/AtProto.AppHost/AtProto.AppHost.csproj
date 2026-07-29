@@ -5,6 +5,7 @@
     <ProjectReference Include="..\AtProto.Hosting.Atproto\AtProto.Hosting.Atproto.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\..\apps\AtProto.FirehoseProbe\AtProto.FirehoseProbe.csproj" />
     <ProjectReference Include="..\..\apps\AtProto.StatusSeeder\AtProto.StatusSeeder.csproj" />
+    <ProjectReference Include="..\..\services\AtProto.AnalyticsView\AtProto.AnalyticsView.csproj" />
     <ProjectReference Include="..\..\services\AtProto.AppView\AtProto.AppView.csproj" />
     <ProjectReference Include="..\..\services\AtProto.Pds\AtProto.Pds.csproj" />
     <ProjectReference Include="..\..\services\AtProto.Relay\AtProto.Relay.csproj" />

@@ -48,6 +48,15 @@ public sealed record CommitResult(
     IReadOnlyList<RepoOp> Ops,
     IReadOnlyDictionary<Cid, byte[]> NewBlocks);
 
+/// <summary>The durable slice of a repository: enough to rehydrate it byte-for-byte after a
+/// restart. <paramref name="Blocks"/> is the reachable set <see cref="RepoStore.ExportCar"/>
+/// serializes (the signed commit, the MST nodes, and every record value block).</summary>
+public sealed record RepoSnapshot(
+    Cid Head,
+    string Rev,
+    IReadOnlyDictionary<string, Cid> Records,
+    IReadOnlyDictionary<Cid, byte[]> Blocks);
+
 /// <summary>
 /// A mutable, in-memory AT Protocol repository: an MST over <c>collection/rkey → record-CID</c>, a
 /// block store, and a signed commit chain. Each <see cref="ApplyWrites"/> encodes the touched
@@ -119,6 +128,69 @@ public sealed class RepoStore
         var store = new RepoStore(key, did, clock ?? new TidClock());
         store.Rebuild(prev: null, Array.Empty<KeyValuePair<Cid, byte[]>>(), out _);
         return store;
+    }
+
+    /// <summary>
+    /// Rehydrate a repository from a persisted <see cref="RepoSnapshot"/>. The signed commit is
+    /// restored as-is (signatures are not reproducible, so the original bytes are authoritative),
+    /// then the MST is recomputed from the records and its root is checked against the persisted
+    /// commit's <c>data</c> — the same root-CID discipline the write path proves. The clock is
+    /// advanced past the persisted revision so <c>rev</c> stays monotonic across the restart.
+    /// </summary>
+    public static RepoStore Load(EcKeypair key, string did, RepoSnapshot snapshot, TidClock? clock = null)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentException.ThrowIfNullOrEmpty(did);
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var store = new RepoStore(key, did, clock ?? new TidClock());
+        foreach (KeyValuePair<string, Cid> record in snapshot.Records)
+            store._records[record.Key] = record.Value;
+        foreach (KeyValuePair<Cid, byte[]> block in snapshot.Blocks)
+            store._blocks[block.Key] = block.Value;
+
+        if (!store._blocks.TryGetValue(snapshot.Head, out byte[]? commitBytes))
+            throw new InvalidOperationException($"Repository {did} snapshot is missing its head commit block {snapshot.Head}.");
+
+        object? commitObj = DagCbor.Decode(commitBytes);
+        var commit = new Commit(
+            Did: commitObj.RequiredField("did").AsString(),
+            Version: commitObj.RequiredField("version").AsInt64(),
+            Data: commitObj.RequiredField("data").AsCid(),
+            Rev: commitObj.RequiredField("rev").AsString(),
+            Prev: commitObj.Field("prev") is Cid prev ? prev : null,
+            Sig: commitObj.RequiredField("sig").AsBytes());
+
+        Mst.MstResult mst = Mst.BuildFromPaths(store._records);
+        if (!mst.Root.Equals(commit.Data))
+            throw new InvalidOperationException(
+                $"Repository {did} failed to rehydrate: rebuilt MST root {mst.Root} does not match persisted commit data {commit.Data}.");
+
+        foreach (KeyValuePair<Cid, byte[]> node in mst.Blocks)
+            store._blocks.TryAdd(node.Key, node.Value);
+        store._mstBlocks = mst.Blocks;
+        store.Head = snapshot.Head;
+        store.Commit = commit;
+        store._clock.EnsureAfter(Tid.Decode(commit.Rev));
+        return store;
+    }
+
+    /// <summary>Capture the durable slice needed to rehydrate this repository via <see cref="Load"/>.</summary>
+    public RepoSnapshot Snapshot()
+    {
+        var blocks = new Dictionary<Cid, byte[]>(_mstBlocks.Count + _records.Count + 1)
+        {
+            [Head] = _blocks[Head],
+        };
+        foreach (KeyValuePair<Cid, byte[]> node in _mstBlocks)
+            blocks[node.Key] = node.Value;
+        foreach (Cid recordCid in _records.Values.Distinct())
+            blocks[recordCid] = _blocks[recordCid];
+        return new RepoSnapshot(
+            Head,
+            Commit.Rev,
+            new Dictionary<string, Cid>(_records, StringComparer.Ordinal),
+            blocks);
     }
 
     /// <summary>Apply a batch of writes as a single commit and return the commit slice.</summary>

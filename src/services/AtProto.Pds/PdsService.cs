@@ -22,7 +22,7 @@ public sealed class XrpcException(int status, string error, string message) : Ex
 /// shared <see cref="FirehoseBroadcaster"/>. This is where a self-authored record becomes a signed,
 /// verifiable firehose event.
 /// </summary>
-public sealed partial class PdsService(PdsIdentity identity, AccountStore accounts, FirehoseBroadcaster firehose)
+public sealed partial class PdsService(PdsIdentity identity, AccountStore accounts, FirehoseBroadcaster firehose, IPdsPersistence persistence)
 {
     private static readonly TimeSpan AccessLifetime = TimeSpan.FromHours(2);
     private static readonly TimeSpan RefreshLifetime = TimeSpan.FromDays(90);
@@ -59,6 +59,8 @@ public sealed partial class PdsService(PdsIdentity identity, AccountStore accoun
         };
         accounts.Add(account);
 
+        persistence.SaveAccount(AccountPersistence.ToPersisted(account));
+
         PublishAccount(did, active: true);
         PublishIdentity(did, normalized);
         return account;
@@ -90,6 +92,7 @@ public sealed partial class PdsService(PdsIdentity identity, AccountStore accoun
             Cid prevData = account.Repo.Root;
 
             CommitResult result = account.Repo.ApplyWrites(writes);
+            persistence.SaveRepo(account.Did, account.Repo.Snapshot());
             byte[] slice = CarWriter.Write(
                 new[] { result.Commit },
                 result.NewBlocks.Select(b => new CarBlock(b.Key, b.Value)));

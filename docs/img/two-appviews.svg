@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="420" viewBox="0 0 980 420" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a-line" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2a2f4a"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0bd"/></marker><marker id="a-you" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e0b341"/></marker><marker id="a-pds" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4ec97a"/></marker><marker id="a-relay" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c678dd"/></marker><marker id="a-appview" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7aa2ff"/></marker><marker id="a-browser" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#56b6c2"/></marker>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect x="0.75" y="0.75" width="978.5" height="418.5" rx="16" fill="#0f1220" stroke="#2a2f4a" stroke-width="1.5"/>
+  <text x="26" y="34" fill="#9aa0bd" font-size="12.5" letter-spacing="0.09em" font-weight="600">PROJECTION FAN-OUT</text>
+  <text x="30" y="58" fill="#e7e9f3" font-size="21" font-weight="700">Two AppViews over one firehose</text>
+  <text x="31" y="80" fill="#9aa0bd" font-size="13">One Relay stream can feed multiple projections, each with the store its query shape needs.</text><g filter="url(#sh)">
+    <rect x="40" y="180" width="210" height="70" rx="12" fill="#171a2b" stroke="#c678dd" stroke-width="1.5"/>
+    <rect x="40" y="180" width="6" height="70" rx="3" fill="#c678dd"/>
+  </g>
+  <text x="67" y="216" font-size="24" text-anchor="middle" dominant-baseline="central">📡</text>
+  <text x="86" y="210" fill="#e7e9f3" font-size="15" font-weight="650">Relay firehose</text>
+  <text x="86" y="228" fill="#9aa0bd" font-size="12"><tspan x="86" dy="0">one ordered event stream</tspan></text><g><rect x="286" y="200" width="143.39999999999998" height="22" rx="11" fill="#1e2238" stroke="#c678dd"/><text x="357.7" y="215" fill="#e7e9f3" font-size="12" text-anchor="middle">same #commit frames</text></g><g filter="url(#sh)">
+    <rect x="390" y="108" width="210" height="70" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/>
+    <rect x="390" y="108" width="6" height="70" rx="3" fill="#7aa2ff"/>
+  </g>
+  <text x="417" y="144" font-size="24" text-anchor="middle" dominant-baseline="central">📰</text>
+  <text x="436" y="138" fill="#e7e9f3" font-size="15" font-weight="650">Presence AppView</text>
+  <text x="436" y="156" fill="#9aa0bd" font-size="12"><tspan x="436" dy="0">latest status per DID</tspan></text><g filter="url(#sh)">
+    <rect x="650" y="108" width="190" height="70" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/>
+    <rect x="650" y="108" width="6" height="70" rx="3" fill="#7aa2ff"/>
+  </g>
+  <text x="677" y="144" font-size="24" text-anchor="middle" dominant-baseline="central">🗂️</text>
+  <text x="696" y="138" fill="#e7e9f3" font-size="15" font-weight="650">in-memory KV</text>
+  <text x="696" y="156" fill="#9aa0bd" font-size="12"><tspan x="696" dy="0">latest-wins point</tspan><tspan x="696" dy="15">lookups</tspan></text><g filter="url(#sh)">
+    <rect x="650" y="242" width="190" height="70" rx="12" fill="#171a2b" stroke="#e0b341" stroke-width="1.5"/>
+    <rect x="650" y="242" width="6" height="70" rx="3" fill="#e0b341"/>
+  </g>
+  <text x="677" y="278" font-size="24" text-anchor="middle" dominant-baseline="central">🦆</text>
+  <text x="696" y="272" fill="#e7e9f3" font-size="15" font-weight="650">DuckDB</text>
+  <text x="696" y="290" fill="#9aa0bd" font-size="12"><tspan x="696" dy="0">columnar OLAP</tspan><tspan x="696" dy="15">aggregates</tspan></text><g filter="url(#sh)">
+    <rect x="390" y="242" width="210" height="70" rx="12" fill="#171a2b" stroke="#7aa2ff" stroke-width="1.5"/>
+    <rect x="390" y="242" width="6" height="70" rx="3" fill="#7aa2ff"/>
+  </g>
+  <text x="417" y="278" font-size="24" text-anchor="middle" dominant-baseline="central">📊</text>
+  <text x="436" y="272" fill="#e7e9f3" font-size="15" font-weight="650">Analytics AppView</text>
+  <text x="436" y="290" fill="#9aa0bd" font-size="12"><tspan x="436" dy="0">activity and repo stats</tspan></text><g filter="url(#sh)">
+    <rect x="870" y="108" width="88" height="70" rx="12" fill="#171a2b" stroke="#56b6c2" stroke-width="1.5"/>
+    <rect x="870" y="108" width="6" height="70" rx="3" fill="#56b6c2"/>
+  </g>
+  <text x="897" y="144" font-size="24" text-anchor="middle" dominant-baseline="central">🖥️</text>
+  <text x="916" y="138" fill="#e7e9f3" font-size="13" font-weight="650">Board</text>
+  <text x="916" y="156" fill="#9aa0bd" font-size="12"><tspan x="916" dy="0">presence</tspan></text><g filter="url(#sh)">
+    <rect x="870" y="242" width="88" height="70" rx="12" fill="#171a2b" stroke="#56b6c2" stroke-width="1.5"/>
+    <rect x="870" y="242" width="6" height="70" rx="3" fill="#56b6c2"/>
+  </g>
+  <text x="897" y="278" font-size="24" text-anchor="middle" dominant-baseline="central">📈</text>
+  <text x="916" y="272" fill="#e7e9f3" font-size="13" font-weight="650">Stats</text>
+  <text x="916" y="290" fill="#9aa0bd" font-size="12"><tspan x="916" dy="0">top</tspan><tspan x="916" dy="15">repos</tspan></text><path d="M250 215 L390 143" fill="none" stroke="#c678dd" stroke-width="2"  marker-end="url(#a-relay)"/><g><rect x="283.3" y="168" width="73.4" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="320" y="181.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">subscribe</text></g><path d="M250 215 L390 277" fill="none" stroke="#c678dd" stroke-width="2"  marker-end="url(#a-relay)"/><g><rect x="283.3" y="235" width="73.4" height="18" rx="5" fill="#1e2238" stroke="#2a2f4a"/><text x="320" y="248.5" fill="#e7e9f3" font-size="11.5" text-anchor="middle">subscribe</text></g><path d="M600 143 L650 143" fill="none" stroke="#7aa2ff" stroke-width="2"  marker-end="url(#a-appview)"/><path d="M600 277 L650 277" fill="none" stroke="#7aa2ff" stroke-width="2"  marker-end="url(#a-appview)"/><path d="M840 143 L870 143" fill="none" stroke="#56b6c2" stroke-width="2"  marker-end="url(#a-browser)"/><path d="M840 277 L870 277" fill="none" stroke="#56b6c2" stroke-width="2"  marker-end="url(#a-browser)"/><text x="390" y="363" fill="#9aa0bd" font-size="12.5">Same event stream, two materialized views: point-lookup KV for the board, aggregate OLAP for analytics.</text><circle cx="36" cy="394" r="6" fill="#c678dd"/><text x="48" y="398" fill="#9aa0bd" font-size="12">relay / firehose</text><circle cx="178.4" cy="394" r="6" fill="#7aa2ff"/><text x="190.4" y="398" fill="#9aa0bd" font-size="12">appview</text><circle cx="263.20000000000005" cy="394" r="6" fill="#e0b341"/><text x="275.20000000000005" y="398" fill="#9aa0bd" font-size="12">analytics store</text><circle cx="399.20000000000005" cy="394" r="6" fill="#56b6c2"/><text x="411.20000000000005" y="398" fill="#9aa0bd" font-size="12">browser</text>
+</svg>

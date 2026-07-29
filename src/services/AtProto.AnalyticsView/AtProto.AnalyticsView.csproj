@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\AtProto.Firehose\AtProto.Firehose.csproj" />
+    <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- DuckDB analytics store (production profile). Bundles the native DuckDB library, which is why
+         the analytics view is gated behind ATPROTO_PROFILE=production and not part of the dev default. -->
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+  </ItemGroup>
+
+</Project>

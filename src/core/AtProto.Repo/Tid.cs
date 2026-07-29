@@ -104,4 +104,17 @@ public sealed class TidClock
 
     /// <summary>Emit the next monotonically increasing TID string.</summary>
     public string Next() => Tid.Encode(NextValue());
+
+    /// <summary>
+    /// Advance the clock so the next emitted TID is strictly greater than <paramref name="value"/>.
+    /// Used when rehydrating a persisted repository so revisions stay monotonic across a restart.
+    /// </summary>
+    public void EnsureAfter(ulong value)
+    {
+        lock (_gate)
+        {
+            if (_last < value)
+                _last = value;
+        }
+    }
 }

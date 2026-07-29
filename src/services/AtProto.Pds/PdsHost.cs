@@ -29,11 +29,13 @@ public static class PdsHost
         builder.Services.AddSingleton<FirehoseBroadcaster>();
         builder.Services.AddSingleton<AccountStore>();
         builder.Services.AddSingleton<BlobStore>();
+        RegisterPersistence(builder.Services, options);
         builder.Services.AddSingleton<PdsService>();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<PdsInstanceAdvertiser>();
 
         WebApplication app = builder.Build();
+        RehydrateFromStorage(app.Services);
         app.UseWebSockets();
         app.MapDefaultEndpoints();
         MapErrorHandling(app);
@@ -43,6 +45,38 @@ public static class PdsHost
         MapSync(app);
         MapIdentity(app);
         return app;
+    }
+
+    /// <summary>Register the storage seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
+    private static void RegisterPersistence(IServiceCollection services, PdsOptions options)
+    {
+        if (string.Equals(options.Storage, "sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            string path = string.IsNullOrWhiteSpace(options.SqlitePath)
+                ? Path.Combine(Environment.CurrentDirectory, "pds.db")
+                : options.SqlitePath;
+            services.AddSingleton<IPdsPersistence>(_ => new SqlitePdsPersistence(path));
+        }
+        else
+        {
+            services.AddSingleton<IPdsPersistence, NullPdsPersistence>();
+        }
+    }
+
+    /// <summary>Replay persisted accounts and blobs into the in-memory read models before serving.</summary>
+    private static void RehydrateFromStorage(IServiceProvider services)
+    {
+        var persistence = services.GetRequiredService<IPdsPersistence>();
+        if (persistence is NullPdsPersistence)
+            return;
+
+        var accounts = services.GetRequiredService<AccountStore>();
+        foreach (PersistedAccount persisted in persistence.LoadAccounts())
+            accounts.Add(AccountPersistence.ToAccount(persisted));
+
+        var blobs = services.GetRequiredService<BlobStore>();
+        foreach (StoredBlob blob in persistence.LoadBlobs())
+            blobs.Put(blob.Bytes, blob.ContentType);
     }
 
     private static void MapErrorHandling(WebApplication app) =>
@@ -181,7 +215,7 @@ public static class PdsHost
 
     private static void MapBlob(WebApplication app)
     {
-        app.MapPost("/xrpc/com.atproto.repo.uploadBlob", async (HttpContext ctx, PdsService pds, BlobStore blobs) =>
+        app.MapPost("/xrpc/com.atproto.repo.uploadBlob", async (HttpContext ctx, PdsService pds, BlobStore blobs, IPdsPersistence persistence) =>
         {
             _ = pds.Authenticate(ctx.Request.Headers.Authorization);
 
@@ -189,6 +223,7 @@ public static class PdsHost
             await ctx.Request.Body.CopyToAsync(body, ctx.RequestAborted);
             string contentType = ctx.Request.ContentType ?? "application/octet-stream";
             StoredBlob blob = blobs.Put(body.ToArray(), contentType);
+            persistence.SaveBlob(blob);
 
             return Results.Ok(new
             {

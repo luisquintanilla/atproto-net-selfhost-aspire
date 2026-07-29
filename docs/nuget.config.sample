@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="github-atproto-selfhost" value="https://nuget.pkg.github.com/luisquintanilla/index.json" />
+  </packageSources>
+  <packageSourceCredentials>
+    <github-atproto-selfhost>
+      <!-- GitHub Packages requires a token with read:packages, even for public packages. -->
+      <add key="Username" value="%GITHUB_USERNAME%" />
+      <add key="ClearTextPassword" value="%GITHUB_TOKEN%" />
+    </github-atproto-selfhost>
+  </packageSourceCredentials>
+</configuration>

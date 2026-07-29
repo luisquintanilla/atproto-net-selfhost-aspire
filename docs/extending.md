@@ -185,6 +185,38 @@ PresenceStore.cs, Model.cs, Program.cs}`.
 **Verify:** keep the store pure (no Rx) so you can unit-test latest-wins/aggregation without timing,
 the way `tests/AtProto.AppView.Tests/` tests `PresenceStore` and `PresenceProjection` directly.
 
+## When would you add a message broker (NATS/JetStream)?
+
+**When:** you need firehose fan-out or replay across processes, across nodes, or across many durable
+consumers. Until then, the in-memory broadcaster is the right default.
+
+The seam is `FirehoseBroadcaster` in `AtProto.Firehose`. It is the current in-memory sequencer and
+fan-out point: `Publish` and `PublishNext` assign or accept monotonic sequence numbers, `Subscribe(cursor)`
+replays retained frames after a cursor and then streams live frames, and `_backfill` keeps a bounded
+in-memory replay window. A broker would sit **behind that seam** as a swap-in for fan-out and replay. It
+should not become a new core dependency that every single-node app has to carry.
+
+Why not put JetStream in core now?
+
+1. The firehose is a **derived stream**. The PDS repositories are the source of truth, so the stream can
+   be rebuilt from repo commits if needed.
+2. The core thesis is BCL-first and minimal dependency. The current in-memory broadcaster already fits
+   the single-node shape.
+3. There is no scale-out or multi-consumer fan-out-across-processes requirement yet.
+
+If you do need JetStream, the mapping is direct:
+
+| FirehoseBroadcaster seam | JetStream shape |
+| --- | --- |
+| broadcaster sequence numbers | JetStream stream sequence |
+| `_backfill` replay window | stream retention |
+| `Subscribe(cursor)` | durable consumer with `OptStartSeq` |
+
+This is closely related to Path D. The DuckDB analytics AppView is a live example of a second projection
+over the same firehose: the presence AppView keeps a latest-wins key/value read model, while analytics can
+materialize aggregate query shapes in a columnar store. A broker-backed fan-out and a new projection both
+plug into the same event-stream boundary, just for different reasons.
+
 ## Path E - Add a new XRPC or HTTP endpoint
 
 **When:** you want a new query or command on an existing service (a new `getX`, a webhook, an admin
@@ -212,11 +244,13 @@ test alongside the existing service tests.
 
 **When:** you want data to survive a restart, or you want a real database instead of memory.
 
-**Be honest about the starting point:** today the service stores are concrete, in-memory classes
-(`RepoStore`, `BlobStore`, `AccountStore`, `PresenceStore`). They are great for a demo and for tests,
-and they are **not** behind an interface yet. The one storage seam that already exists is
-`ICursorStore` in `AtProto.Firehose`, with an in-memory and a file-backed implementation. Use it as the
-template.
+**Be honest about the starting point:** the service *read-model* stores are concrete, in-memory
+classes (`RepoStore`, `BlobStore`, `AccountStore`, `PresenceStore`), great for a demo and for tests.
+Two durable seams already exist to copy. The simplest is `ICursorStore` in `AtProto.Firehose` (a tiny
+append point, with in-memory and file-backed implementations). The fuller one, added by the
+[production profile](storage.md), is `IPdsPersistence` in `AtProto.Pds`: a **write-through** seam with a
+real SQLite implementation that persists accounts, repositories, and blobs on every commit and
+rehydrates them on startup (in-memory stays the default). Use whichever matches your need.
 
 **The seam (`ICursorStore`) to copy:**
 
@@ -238,13 +272,19 @@ public interface ICursorStore
 3. Add your durable implementation (SQLite, Postgres, Redis) behind the same interface and register it
    instead. Nothing else in the service changes.
 
-**Code pointers:** `src/core/AtProto.Firehose/CursorStore.cs` (the template),
-`src/services/AtProto.AppView/PresenceStore.cs`, `src/services/AtProto.Pds/{Account.cs, BlobStore.cs}`,
-`src/core/AtProto.Repo/RepoStore.cs`.
+The PDS already demonstrates the full pattern end to end: `IPdsPersistence` (default `NullPdsPersistence`,
+a no-op) with `SqlitePdsPersistence` swapped in when `Pds:Storage=sqlite`, written through on each commit
+and replayed on startup with a verified Merkle Search Tree root. See [storage.md](storage.md) for the
+schema and the restart-durability test.
+
+**Code pointers:** `src/core/AtProto.Firehose/CursorStore.cs` (the simple template),
+`src/services/AtProto.Pds/{IPdsPersistence.cs, SqlitePdsPersistence.cs}` (the write-through example),
+`src/services/AtProto.AppView/PresenceStore.cs`, `src/core/AtProto.Repo/RepoStore.cs`
+(`Snapshot`/`Load`).
 
 **Verify:** the existing tests still pass against the in-memory default, and your durable store passes
-the same behavioral tests plus a restart-resume test (the way `FileCursorStore` and the relay's
-cursor persistence are tested).
+the same behavioral tests plus a restart-resume test (the way `PersistenceTests`, `FileCursorStore`, and
+the relay's cursor persistence are tested).
 
 ## Path G - Compose your own topology with Aspire
 
@@ -314,11 +354,15 @@ hard to self-verify without a real browser and client. **Path:** add an AS surfa
 DPoP-bound tokens, publish client metadata, and gate the write endpoints on it. Until then, treat auth
 as demo-grade.
 
-### Durable storage (in-memory today)
+### Durable storage (production profile built; in-memory is the default)
 
-All service stores are in-memory, so data resets on restart (cursors already persist). **Path:** the
-seam from [Path F](#path-f---persist-or-swap-storage). Extract store interfaces, keep the in-memory
-versions as defaults, add a durable implementation, register it in DI.
+The PDS now has a durable **production profile**. With `ATPROTO_PROFILE=production` (or, standalone,
+`Pds:Storage=sqlite`) the PDS writes accounts, repositories, and blobs through to SQLite and rehydrates
+them on startup, and production also adds a [DuckDB analytics view](analytics.md). In-memory stays the
+default so onboarding and tests need no configuration and write nothing to disk. Still in-memory by
+design: the presence AppView's latest-wins key/value read model, a rebuildable projection that a
+key/value store serves correctly at any scale here. See [storage profiles](storage.md). **Path to
+persist another store:** the seam from [Path F](#path-f---persist-or-swap-storage).
 
 ### Publishing to nuget.org (deferred)
 

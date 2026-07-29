@@ -19,6 +19,7 @@
     <Project Path="src/core/AtProto.Firehose/AtProto.Firehose.csproj" />
   </Folder>
   <Folder Name="/src/services/">
+    <Project Path="src/services/AtProto.AnalyticsView/AtProto.AnalyticsView.csproj" />
     <Project Path="src/services/AtProto.AppView/AtProto.AppView.csproj" />
     <Project Path="src/services/AtProto.Pds/AtProto.Pds.csproj" />
     <Project Path="src/services/AtProto.Relay/AtProto.Relay.csproj" />
@@ -28,6 +29,7 @@
     <Project Path="tests/AtProto.Core.Tests/AtProto.Core.Tests.csproj" />
     <Project Path="tests/AtProto.Firehose.Tests/AtProto.Firehose.Tests.csproj" />
     <Project Path="tests/AtProto.AppView.Tests/AtProto.AppView.Tests.csproj" />
+    <Project Path="tests/AtProto.AnalyticsView.Tests/AtProto.AnalyticsView.Tests.csproj" />
     <Project Path="tests/AtProto.Pds.Tests/AtProto.Pds.Tests.csproj" />
     <Project Path="tests/AtProto.Hosting.Tests/AtProto.Hosting.Tests.csproj" />
     <Project Path="tests/AtProto.Relay.Tests/AtProto.Relay.Tests.csproj" />

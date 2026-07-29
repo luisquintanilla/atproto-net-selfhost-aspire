@@ -28,6 +28,17 @@ public sealed class PdsOptions
 
     /// <summary>Relay base URLs this PDS should ask to crawl its public firehose at startup.</summary>
     public List<string> AnnounceRelayUrls { get; set; } = [];
+
+    /// <summary>
+    /// The durable store backing accounts, repositories, and blobs. <c>memory</c> (the default) keeps
+    /// everything in process, matching the zero-config dev profile. <c>sqlite</c> turns on the
+    /// production profile: state is written through to a SQLite database and rehydrated on startup.
+    /// </summary>
+    public string Storage { get; set; } = "memory";
+
+    /// <summary>Path to the SQLite database file when <see cref="Storage"/> is <c>sqlite</c>. When
+    /// empty, a <c>pds.db</c> file is created under the process working directory.</summary>
+    public string? SqlitePath { get; set; }
 }
 
 /// <summary>

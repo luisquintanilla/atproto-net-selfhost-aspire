@@ -55,6 +55,21 @@ HTTP profile ports:
 | Relay | `http://localhost:5333` |
 | AppView board | `http://localhost:5193` |
 
+### Durable production profile (optional)
+
+By default the stack runs **in-memory**: zero configuration, nothing on disk, disposable. To run the
+durable **production** profile instead, set one environment variable. Each Personal Data Server (PDS)
+then writes accounts, repositories, and blobs through to SQLite (they survive a restart), and a
+[DuckDB analytics view](docs/analytics.md) is added over the same firehose:
+
+```bash
+ASPIRE_ALLOW_UNSECURED_TRANSPORT=true ATPROTO_PROFILE=production \
+  dotnet run --project src/aspire/AtProto.AppHost/AtProto.AppHost.csproj --launch-profile http
+```
+
+Nothing is removed by turning this on. In-memory stays the default and the test default. See
+[storage profiles](docs/storage.md) for the toggle, the SQLite schema, and what survives a restart.
+
 ## What you can do
 
 - Watch the live presence board update from self-hosted demo accounts.
@@ -101,6 +116,8 @@ Start here:
 6. [Scenarios](docs/scenarios.md), why this exists and where it fits.
 7. [Packaging](docs/packaging.md), the extractable libraries and how preview packages are built.
 8. [Extending](docs/extending.md), build on the stack: reuse a library, add a lexicon, build a projection, swap storage, compose a topology.
+9. [Storage profiles](docs/storage.md), the durable production profile (SQLite PDS) vs the in-memory default.
+10. [Analytics view](docs/analytics.md), the DuckDB OLAP projection production adds over the same firehose.
 
 The dense implementation log is [docs/plan.md](docs/plan.md). To build or change the stack, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -131,6 +148,7 @@ The build is phased. Each milestone is independently demoable.
 - **Live SignalR UI** - board updates from server-driven projection deltas, done.
 - **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and nine extractable preview NuGet packages, done.
 - **M6 stretch** - mostly landed: federation discovery (each PDS advertises a `place.selfhost.instance` record and `requestCrawl`s the relay; the AppView `/directory` aggregates two PDS instances one relay crawls), `did:plc` creation, blob upload/fetch, stricter Relay MST verification, lexicon-to-C# codegen, and multi-targeting the core libraries (`net9.0;net10.0`). Remaining: a full OAuth authorization server and publishing the libraries to nuget.org once the API surface settles.
+- **Production profile** - a durable, opt-in "real-world" stack: SQLite-backed PDS (accounts, repositories, and blobs survive a restart) plus a [DuckDB analytics AppView](docs/analytics.md) over the same firehose, both behind `ATPROTO_PROFILE=production`; in-memory stays the zero-config default. The preview libraries publish to [GitHub Packages](docs/packaging.md) on a version tag. Done.
 
 ## License
 

@@ -96,9 +96,21 @@ public static class AtprotoHostingExtensions
             .WaitFor(pds)
             .WithEnvironment("AppView__PdsUrl", pds.GetEndpoint("http"));
 
+    /// <summary>
+    /// Switch a PDS to durable SQLite storage (the "production" profile). Accounts, repositories,
+    /// and blobs are written through to a SQLite database at <paramref name="path"/> and rehydrated
+    /// on startup, so state survives a restart. Omit this (the default) to keep the zero-config
+    /// in-memory store. The SQLite dependency lives only inside the PDS service; this just flips the
+    /// <c>Pds:Storage</c> config the service reads.
+    /// </summary>
+    public static IResourceBuilder<ProjectResource> WithSqliteStorage(
+        this IResourceBuilder<ProjectResource> pds, string path)
+        => pds
+            .WithEnvironment("Pds__Storage", "sqlite")
+            .WithEnvironment("Pds__SqlitePath", path);
+
     /// <summary>Advertise this PDS as a named self-hosted instance.</summary>
-    public static IResourceBuilder<ProjectResource> WithInstance(
-        this IResourceBuilder<ProjectResource> pds,
+    public static IResourceBuilder<ProjectResource> WithInstance(        this IResourceBuilder<ProjectResource> pds,
         string name,
         string? description = null)
     {

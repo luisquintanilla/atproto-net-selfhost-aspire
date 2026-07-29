@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>atproto self-host — analytics</title>
+  <style>
+    :root {
+      --bg: #0f1220; --panel: #171a2b; --panel2: #1e2238; --line: #2a2f4a;
+      --text: #e7e9f3; --muted: #9aa0bd; --accent: #7aa2ff; --good: #4ec97a;
+      --warn: #e0b341; --bad: #e06c75;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font: 14px system-ui, -apple-system, Segoe UI, sans-serif; margin: 0;
+      background: var(--bg); color: var(--text);
+    }
+    a { color: var(--accent); }
+    header {
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+      display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.05rem; margin: 0; font-weight: 650; }
+    header h1 small { color: var(--muted); font-weight: 400; font-size: .8rem; }
+    #live { font-size: 12px; font-weight: 700; margin-left: auto; }
+    #live.on { color: var(--good); }
+    #live.off { color: var(--bad); }
+    main { padding: 1.25rem; max-width: 1100px; margin: 0 auto; display: grid; gap: 1.25rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem;
+    }
+    .card .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .card .v { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: .25rem; }
+    .card .v small { font-size: .8rem; color: var(--muted); font-weight: 400; }
+    section {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    }
+    section > h2 {
+      font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+      margin: 0; padding: .8rem 1.1rem; border-bottom: 1px solid var(--line); background: var(--panel2);
+    }
+    .body { padding: 1rem 1.1rem; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; }
+    td.num, th.num { text-align: right; }
+    td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    .spark { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
+    .spark .bar {
+      flex: 1 1 0; background: linear-gradient(180deg, var(--accent), #3a5bd0);
+      border-radius: 3px 3px 0 0; min-height: 2px; transition: height .3s ease;
+    }
+    .spark .bar:hover { background: var(--good); }
+    .pill {
+      display: inline-block; padding: .12rem .5rem; border-radius: 999px; font-size: 12px;
+      background: var(--panel2); border: 1px solid var(--line); margin: 0 .35rem .35rem 0;
+    }
+    .pill b { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .empty { color: var(--muted); font-style: italic; padding: .5rem; }
+    footer { color: var(--muted); font-size: 12px; text-align: center; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>atproto self-host <small>— analytics view (DuckDB)</small></h1>
+    <span id="live" class="off">● connecting</span>
+  </header>
+
+  <main>
+    <div class="cards">
+      <div class="card"><div class="k">Total events</div><div class="v" id="total">—</div></div>
+      <div class="card"><div class="k">Last minute</div><div class="v" id="rate">—<small> ops/min</small></div></div>
+      <div class="card"><div class="k">Collections</div><div class="v" id="ncollections">—</div></div>
+      <div class="card"><div class="k">Active repos</div><div class="v" id="nrepos">—</div></div>
+    </div>
+
+    <section>
+      <h2>Activity (per minute)</h2>
+      <div class="body">
+        <div class="spark" id="spark"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>By action</h2>
+      <div class="body" id="actions"><span class="empty">no data yet</span></div>
+    </section>
+
+    <section>
+      <h2>Collections</h2>
+      <div class="body">
+        <table>
+          <thead><tr><th>Collection (NSID)</th><th class="num">Events</th><th class="num">Repos</th></tr></thead>
+          <tbody id="collections"><tr><td colspan="3" class="empty">no data yet</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Top repos</h2>
+      <div class="body">
+        <table>
+          <thead><tr><th>Repo (DID)</th><th class="num">Events</th></tr></thead>
+          <tbody id="repos"><tr><td colspan="2" class="empty">no data yet</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    OLAP projection over the same firehose that feeds the <a href="/">presence board</a>.
+    Aggregates the presence view can't answer: GROUP BY collection, per-action counts, top-N repos, time-series.
+  </footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const fmt = (n) => (n ?? 0).toLocaleString();
+
+    async function getJson(path) {
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) throw new Error(path + " -> " + res.status);
+      return res.json();
+    }
+
+    function setLive(ok) {
+      const el = $("live");
+      el.className = ok ? "on" : "off";
+      el.textContent = ok ? "● live" : "● offline";
+    }
+
+    function renderActions(byAction) {
+      const box = $("actions");
+      if (!byAction || byAction.length === 0) { box.innerHTML = '<span class="empty">no data yet</span>'; return; }
+      box.innerHTML = byAction
+        .map((a) => `<span class="pill">${a.action} <b>${fmt(a.count)}</b></span>`)
+        .join("");
+    }
+
+    function renderCollections(rows) {
+      const tb = $("collections");
+      if (!rows || rows.length === 0) { tb.innerHTML = '<tr><td colspan="3" class="empty">no data yet</td></tr>'; return; }
+      tb.innerHTML = rows
+        .map((r) => `<tr><td class="mono">${r.collection}</td><td class="num">${fmt(r.count)}</td><td class="num">${fmt(r.repos)}</td></tr>`)
+        .join("");
+      $("ncollections").textContent = fmt(rows.length);
+    }
+
+    function renderRepos(rows) {
+      const tb = $("repos");
+      if (!rows || rows.length === 0) { tb.innerHTML = '<tr><td colspan="2" class="empty">no data yet</td></tr>'; return; }
+      tb.innerHTML = rows
+        .map((r) => `<tr><td class="mono">${r.did}</td><td class="num">${fmt(r.count)}</td></tr>`)
+        .join("");
+    }
+
+    function renderSpark(buckets) {
+      const box = $("spark");
+      if (!buckets || buckets.length === 0) { box.innerHTML = '<span class="empty">no data yet</span>'; return; }
+      const max = Math.max(1, ...buckets.map((b) => b.count));
+      box.innerHTML = buckets
+        .map((b) => {
+          const h = Math.round((b.count / max) * 100);
+          const when = new Date(b.time).toLocaleTimeString();
+          return `<div class="bar" style="height:${h}%" title="${when}: ${fmt(b.count)}"></div>`;
+        })
+        .join("");
+      $("rate").innerHTML = fmt(buckets[buckets.length - 1].count) + '<small> ops/min</small>';
+    }
+
+    async function tick() {
+      try {
+        const [stats, collections, repos, activity] = await Promise.all([
+          getJson("/xrpc/place.selfhost.getFirehoseStats"),
+          getJson("/xrpc/place.selfhost.getCollections"),
+          getJson("/xrpc/place.selfhost.getTopRepos?limit=12"),
+          getJson("/xrpc/place.selfhost.getActivity?unit=minute&limit=30"),
+        ]);
+        $("total").textContent = fmt(stats.total);
+        renderActions(stats.byAction);
+        renderCollections(collections);
+        renderRepos(repos);
+        renderSpark(activity);
+        const repoCount = new Set(repos.map((r) => r.did)).size;
+        $("nrepos").textContent = repos.length ? fmt(repos.length) + "+" : "0";
+        setLive(true);
+      } catch (err) {
+        console.error(err);
+        setLive(false);
+      }
+    }
+
+    tick();
+    setInterval(tick, 2000);
+  </script>
+</body>
+</html>

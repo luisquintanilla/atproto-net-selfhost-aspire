@@ -68,13 +68,13 @@ To confirm the gate, run `dotnet pack` and check the output: exactly the nine li
 
 ## Versioning intent
 
-The libraries ship as a **preview line** (`0.1.0`) and are **not published to nuget.org**. The public
-API is still moving as the services grow (OAuth, richer identity and lexicons), and we do not want to
-freeze names and signatures before they have settled. Preview artifacts let you try the libraries and
-pin exact versions without implying a stability promise we cannot keep yet.
+The libraries ship as a **preview line** (`0.1.0`) and are **not published to nuget.org yet**. The
+public API is still moving as the services grow (OAuth, richer identity and lexicons), and we do not
+want to freeze names and signatures before they have settled. Preview artifacts let you try the
+libraries and pin exact versions without implying a stability promise we cannot keep yet.
 
-When the surface settles, publishing to nuget.org is a small step: drop the preview framing and add a
-push to the release workflow.
+When the surface settles, publishing to nuget.org is a small step: drop the preview framing and point
+the release workflow at nuget.org.
 
 ## How preview packages are produced
 
@@ -86,8 +86,39 @@ dotnet pack atproto-net-selfhost-aspire.slnx --configuration Release -o ./artifa
 
 In CI, the `pack` job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs after the build
 job, packs in Release with `ContinuousIntegrationBuild=true` (deterministic paths and SourceLink), and
-uploads the `.nupkg` and `.snupkg` files as the `nuget-packages` build artifact. Nothing is pushed to a
-public feed.
+uploads the `.nupkg` and `.snupkg` files as the `nuget-packages` build artifact. The `publish` job uses
+the same pack command and only pushes to GitHub Packages on version tags or manual runs.
+
+## Install from GitHub Packages
+
+Preview packages are published to GitHub Packages, not nuget.org yet. Maintainers cut a release by
+pushing a `vX.Y.Z` tag, which triggers the `publish` job and pushes the nine packable libraries to:
+
+```text
+https://nuget.pkg.github.com/luisquintanilla/index.json
+```
+
+To consume them, add the GitHub Packages source to your project or user NuGet configuration. Start from
+[`docs/nuget.config.sample`](nuget.config.sample) if you want a file-based setup that keeps nuget.org
+available for normal restores.
+
+The honest papercut: GitHub Packages requires authentication even for public packages. Use a GitHub PAT
+with the `read:packages` scope, then add the source with credentials. On Linux and in CI, the clear-text
+password option is the portable path:
+
+```bash
+dotnet nuget add source https://nuget.pkg.github.com/luisquintanilla/index.json \
+  --name github-atproto-selfhost \
+  --username "$GITHUB_USERNAME" \
+  --password "$GITHUB_TOKEN" \
+  --store-password-in-clear-text
+```
+
+Then install a package as usual:
+
+```bash
+dotnet add package AtProto.Repo --version 0.1.0
+```
 
 ### Trying a preview package from another project
 
