@@ -17,4 +17,7 @@ public sealed class RelayOptions
 
     /// <summary>Directory for per-host upstream cursors and the persisted global seq.</summary>
     public string? CursorDir { get; set; }
+
+    /// <summary>Validate commit CAR blocks and MST roots before re-emitting commits.</summary>
+    public bool StrictCommitValidation { get; set; } = true;
 }

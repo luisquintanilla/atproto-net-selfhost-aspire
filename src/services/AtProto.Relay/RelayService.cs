@@ -4,7 +4,7 @@ namespace AtProto.Relay;
 
 /// <summary>
 /// The relay engine. For each upstream host it opens a resilient <c>subscribeRepos</c> subscription
-/// (BCL pull ingest with reconnect/resume), applies lenient validation, assigns a <b>global</b>
+/// (BCL pull ingest with reconnect/resume), validates commits, assigns a <b>global</b>
 /// monotonic seq, and re-emits the frame through a shared <see cref="FirehoseBroadcaster"/> that
 /// downstream consumers (our AppView) subscribe to. Per-host upstream cursors and the global seq are
 /// persisted so a restart resumes without gaps; re-emit is at-least-once, and the rev-monotonic
@@ -109,10 +109,6 @@ public sealed class RelayService : BackgroundService
 
     private async Task ProcessAsync(string url, HostState host, RepoEvent ev, CancellationToken ct)
     {
-        // Lenient validation (DID non-empty + rev monotonic per repo).
-        // TODO M6 (strict): verify the commit signature and MST inversion against prevData. Deferred
-        // because signature checks would couple the relay to did:web identity resolution in the hot
-        // path, and even the AppView doesn't verify — so this stays lenient for the MVP.
         if (ev is RepoCommitEvent commit)
         {
             if (string.IsNullOrEmpty(commit.Did))
@@ -123,6 +119,11 @@ public sealed class RelayService : BackgroundService
             if (!_registry.IsRevMonotonic(commit.Did, commit.Rev))
             {
                 _logger.LogDebug("relay: dropping non-monotonic rev {Rev} for {Did}", commit.Rev, commit.Did);
+                return;
+            }
+            if (_options.StrictCommitValidation && !RelayCommitValidator.TryValidate(commit, out string error))
+            {
+                _logger.LogDebug("relay: dropping invalid commit {Commit} for {Did}: {Error}", commit.Commit, commit.Did, error);
                 return;
             }
         }
