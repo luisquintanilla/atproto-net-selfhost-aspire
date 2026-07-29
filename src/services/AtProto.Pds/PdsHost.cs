@@ -30,6 +30,8 @@ public static class PdsHost
         builder.Services.AddSingleton<AccountStore>();
         builder.Services.AddSingleton<BlobStore>();
         builder.Services.AddSingleton<PdsService>();
+        builder.Services.AddHttpClient();
+        builder.Services.AddHostedService<PdsInstanceAdvertiser>();
 
         WebApplication app = builder.Build();
         app.UseWebSockets();

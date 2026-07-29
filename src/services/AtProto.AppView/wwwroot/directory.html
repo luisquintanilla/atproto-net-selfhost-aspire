@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>atproto self-host - directory</title>
+  <style>
+    :root {
+      --bg: #0f1220; --panel: #171a2b; --panel2: #1e2238; --line: #2a2f4a;
+      --text: #e7e9f3; --muted: #9aa0bd; --accent: #7aa2ff; --good: #4ec97a;
+    }
+    * { box-sizing: border-box; }
+    body { font: 14px system-ui, -apple-system, Segoe UI, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+    a { color: var(--accent); }
+    header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+    header h1 { font-size: 1.05rem; margin: 0; font-weight: 650; }
+    header h1 small { color: var(--muted); font-weight: 400; font-size: .8rem; }
+    header nav { margin-left: auto; font-size: 12px; }
+    main { padding: 1.25rem; }
+    #summary { color: var(--muted); margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .9rem; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; box-shadow: 0 12px 30px rgba(0,0,0,.18); }
+    .card h2 { font-size: 1rem; margin: 0 0 .35rem; }
+    .desc { color: var(--muted); min-height: 2.5em; margin-bottom: .8rem; }
+    dl { display: grid; grid-template-columns: 64px 1fr; gap: .35rem .7rem; margin: 0; }
+    dt { color: var(--muted); font-size: 12px; }
+    dd { margin: 0; word-break: break-all; font-size: 12px; }
+    .pill { display: inline-block; color: var(--good); background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; padding: .15rem .5rem; font-size: 11px; margin-bottom: .6rem; }
+    .error { color: #e06c75; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>atproto directory <small>· self-hosted instances discovered through the relay</small></h1>
+    <nav><a href="/">presence board</a></nav>
+  </header>
+  <main>
+    <div id="summary">Loading directory…</div>
+    <div class="grid" id="cards"></div>
+  </main>
+  <script>
+    const summary = document.getElementById('summary');
+    const cards = document.getElementById('cards');
+    const text = value => value || '-' ;
+
+    async function load() {
+      try {
+        const res = await fetch('/directory');
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const data = await res.json();
+        summary.textContent = `${data.count} instance${data.count === 1 ? '' : 's'} discovered`;
+        cards.innerHTML = '';
+        for (const inst of data.instances) {
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.innerHTML = `
+            <span class="pill">${escapeHtml(inst.createdAt ? new Date(inst.createdAt).toLocaleString() : 'advertised')}</span>
+            <h2>${escapeHtml(inst.name)}</h2>
+            <div class="desc">${escapeHtml(text(inst.description))}</div>
+            <dl>
+              <dt>DID</dt><dd>${escapeHtml(inst.did)}</dd>
+              <dt>PDS</dt><dd><a href="${escapeAttr(inst.pds)}">${escapeHtml(inst.pds)}</a></dd>
+              <dt>Relay</dt><dd>${inst.relay ? `<a href="${escapeAttr(inst.relay)}">${escapeHtml(inst.relay)}</a>` : '-'}</dd>
+              <dt>AppView</dt><dd>${inst.appView ? `<a href="${escapeAttr(inst.appView)}">${escapeHtml(inst.appView)}</a>` : '-'}</dd>
+            </dl>`;
+          cards.appendChild(card);
+        }
+      } catch (err) {
+        summary.innerHTML = `<span class="error">Directory unavailable: ${escapeHtml(err.message)}</span>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    }
+    function escapeAttr(value) { return escapeHtml(value); }
+    load();
+  </script>
+</body>
+</html>

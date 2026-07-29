@@ -27,7 +27,8 @@ public static class AtprotoHostingExtensions
         this IDistributedApplicationBuilder builder, string name)
         where TProject : IProjectMetadata, new()
     {
-        IResourceBuilder<ProjectResource> pds = builder.AddProject<TProject>(name);
+        IResourceBuilder<ProjectResource> pds = builder.AddProject<TProject>(name, launchProfileName: null)
+            .WithHttpEndpoint(env: "ASPNETCORE_HTTP_PORTS");
         return pds.WithEnvironment("Pds__PublicUrl", pds.GetEndpoint("http"));
     }
 
@@ -35,7 +36,8 @@ public static class AtprotoHostingExtensions
     public static IResourceBuilder<ProjectResource> AddAtprotoRelay<TProject>(
         this IDistributedApplicationBuilder builder, string name)
         where TProject : IProjectMetadata, new()
-        => builder.AddProject<TProject>(name);
+        => builder.AddProject<TProject>(name, launchProfileName: null)
+            .WithHttpEndpoint(env: "ASPNETCORE_HTTP_PORTS");
 
     /// <summary>
     /// Add a self-hosted AppView. Point it at a firehose with <see cref="WithFirehose"/> and choose
@@ -44,7 +46,8 @@ public static class AtprotoHostingExtensions
     public static IResourceBuilder<ProjectResource> AddAtprotoAppView<TProject>(
         this IDistributedApplicationBuilder builder, string name)
         where TProject : IProjectMetadata, new()
-        => builder.AddProject<TProject>(name);
+        => builder.AddProject<TProject>(name, launchProfileName: null)
+            .WithHttpEndpoint(env: "ASPNETCORE_HTTP_PORTS");
 
     /// <summary>
     /// Make the relay crawl an upstream PDS (or another relay) firehose. Wires service discovery,
@@ -92,4 +95,36 @@ public static class AtprotoHostingExtensions
             .WithReference(pds)
             .WaitFor(pds)
             .WithEnvironment("AppView__PdsUrl", pds.GetEndpoint("http"));
+
+    /// <summary>Advertise this PDS as a named self-hosted instance.</summary>
+    public static IResourceBuilder<ProjectResource> WithInstance(
+        this IResourceBuilder<ProjectResource> pds,
+        string name,
+        string? description = null)
+    {
+        pds = pds.WithEnvironment("Pds__InstanceName", name);
+        if (!string.IsNullOrWhiteSpace(description))
+            pds = pds.WithEnvironment("Pds__InstanceDescription", description);
+        return pds;
+    }
+
+    /// <summary>Add relay/appview URLs to the PDS instance advertisement and ask the relay to crawl it.</summary>
+    public static IResourceBuilder<ProjectResource> WithInstanceEndpoints(
+        this IResourceBuilder<ProjectResource> pds,
+        IResourceBuilder<ProjectResource> relay,
+        IResourceBuilder<ProjectResource> appview,
+        int announceIndex = 0)
+        => pds
+            .WithEnvironment("Pds__InstanceRelayUrl", relay.GetEndpoint("http"))
+            .WithEnvironment("Pds__InstanceAppViewUrl", appview.GetEndpoint("http"))
+            .WithEnvironment($"Pds__AnnounceRelayUrls__{announceIndex}", relay.GetEndpoint("http"));
+
+    /// <summary>Let the AppView query a relay's host directory (<c>AppView:RelayUrl</c>).</summary>
+    public static IResourceBuilder<ProjectResource> WithDirectoryRelay(
+        this IResourceBuilder<ProjectResource> appview,
+        IResourceBuilder<ProjectResource> relay)
+        => appview
+            .WithReference(relay)
+            .WaitFor(relay)
+            .WithEnvironment("AppView__RelayUrl", relay.GetEndpoint("http"));
 }

@@ -13,6 +13,21 @@ public sealed class PdsOptions
 
     /// <summary>HMAC secret for session JWTs. Override in production.</summary>
     public string JwtSecret { get; set; } = "dev-only-pds-secret-change-me";
+
+    /// <summary>Display name advertised by this PDS as a self-hosted instance. Empty disables advertisement.</summary>
+    public string? InstanceName { get; set; }
+
+    /// <summary>Optional short description advertised in <c>place.selfhost.instance/self</c>.</summary>
+    public string? InstanceDescription { get; set; }
+
+    /// <summary>Optional relay URL advertised in <c>place.selfhost.instance/self</c>.</summary>
+    public string? InstanceRelayUrl { get; set; }
+
+    /// <summary>Optional AppView URL advertised in <c>place.selfhost.instance/self</c>.</summary>
+    public string? InstanceAppViewUrl { get; set; }
+
+    /// <summary>Relay base URLs this PDS should ask to crawl its public firehose at startup.</summary>
+    public List<string> AnnounceRelayUrls { get; set; } = [];
 }
 
 /// <summary>

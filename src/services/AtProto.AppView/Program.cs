@@ -16,6 +16,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<PdsResolver>();
 builder.Services.AddSingleton<InspectService>();
 builder.Services.AddSingleton<ComposeService>();
+builder.Services.AddSingleton<DirectoryService>();
 
 // Live push: SignalR carries the Rx projection's deltas + stats to connected boards.
 builder.Services.AddSignalR();
@@ -30,6 +31,15 @@ app.UseStaticFiles();
 app.MapDefaultEndpoints();
 
 const string StatusNsid = "place.selfhost.status";
+
+// Directory: relay host list + each PDS's place.selfhost.instance/self record.
+app.MapGet("/directory", async (DirectoryService directory, CancellationToken ct) =>
+{
+    if (!directory.Enabled)
+        return Results.Problem("Directory is unavailable: no relay configured (AppView:RelayUrl or Firehose:Url).", statusCode: 503);
+    IReadOnlyList<DirectoryInstance> instances = await directory.ListAsync(ct);
+    return Results.Ok(new { count = instances.Count, instances });
+});
 
 // XRPC query: latest status per account, most recent first.
 app.MapGet("/xrpc/place.selfhost.getPresence", (PresenceStore store, int? limit) =>
