@@ -81,6 +81,55 @@ public sealed class ClientMetadataResolver : IDisposable
         return await FetchAsync(clientId, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Fetch and parse a confidential client's JWKS from its <c>jwks_uri</c>, using the same
+    /// SSRF-hardened HTTPS client as metadata resolution (no redirects, public IPs only, size and
+    /// time capped). Inline <c>jwks</c> never reaches this path.
+    /// </summary>
+    public async Task<JsonWebKeySet> FetchJwksAsync(string jwksUri, CancellationToken ct = default)
+    {
+        if (!Uri.TryCreate(jwksUri, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new ClientMetadataException("jwks_uri must be an https URL");
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, jwksUri);
+        request.Headers.Accept.ParseAdd("application/json");
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        }
+        catch (HttpRequestException e)
+        {
+            throw new ClientMetadataException($"could not fetch jwks: {e.Message}");
+        }
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new ClientMetadataException("jwks fetch timed out");
+        }
+
+        using (response)
+        {
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new ClientMetadataException($"jwks fetch returned HTTP {(int)response.StatusCode} (must be 200)");
+
+            byte[] body = await ReadCappedAsync(response.Content, _options.MaxResponseBytes, ct).ConfigureAwait(false);
+            try
+            {
+                using JsonDocument json = JsonDocument.Parse(body);
+                return JsonWebKeySet.Parse(json.RootElement);
+            }
+            catch (JsonException e)
+            {
+                throw new ClientMetadataException($"jwks is not valid JSON: {e.Message}");
+            }
+            catch (FormatException e)
+            {
+                throw new ClientMetadataException($"jwks is invalid: {e.Message}");
+            }
+        }
+    }
+
     private async Task<ClientMetadata> FetchAsync(string clientId, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, clientId);

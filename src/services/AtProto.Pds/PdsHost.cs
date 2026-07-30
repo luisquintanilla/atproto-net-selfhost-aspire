@@ -17,7 +17,7 @@ namespace AtProto.Pds;
 /// </summary>
 public static class PdsHost
 {
-    public static WebApplication Build(string[] args, Action<PdsOptions>? configure = null)
+    public static WebApplication Build(string[] args, Action<PdsOptions>? configure = null, Action<IServiceCollection>? configureServices = null)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
@@ -45,10 +45,14 @@ public static class PdsHost
         builder.Services.AddSingleton(new DpopNonceService(RandomNumberGenerator.GetBytes(32)));
         builder.Services.AddSingleton(_ => new ClientMetadataResolver(new ClientMetadataResolverOptions
         {
-            AllowConfidentialClients = false,
+            AllowConfidentialClients = true,
             AllowLocalhostClient = true,
         }));
         builder.Services.AddHostedService<PdsInstanceAdvertiser>();
+
+        // A test/adopter hook applied last, so a supplied registration (e.g. a resolver with a canned
+        // HTTP handler for offline client-metadata resolution) overrides the defaults above.
+        configureServices?.Invoke(builder.Services);
 
         WebApplication app = builder.Build();
         RehydrateFromStorage(app.Services);
@@ -85,6 +89,13 @@ public static class PdsHost
 
     /// <summary>The maximum lifetime of a public-client OAuth session (spec cap: two weeks).</summary>
     private static readonly TimeSpan PublicSessionLifetime = TimeSpan.FromDays(14);
+
+    /// <summary>
+    /// The lifetime of a confidential-client OAuth session. Confidential clients prove their identity
+    /// with a <c>private_key_jwt</c> assertion on every token request, so their sessions may outlive
+    /// the two-week public-client cap.
+    /// </summary>
+    private static readonly TimeSpan ConfidentialSessionLifetime = TimeSpan.FromDays(90);
 
     /// <summary>Register the storage seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
     private static void RegisterPersistence(IServiceCollection services, PdsOptions options)
@@ -255,6 +266,12 @@ public static class PdsHost
             {
                 return OAuthJsonError(context, StatusCodes.Status400BadRequest, ex.ErrorCode, ex.Message);
             }
+
+            // A confidential client authenticates at PAR as well as at the token endpoint (RFC 9126).
+            string issuer = pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority);
+            IResult? clientAuthError = await AuthenticateClient(context, store, resolver, client, form, proof, issuer, OAuthEndpointUrl(pds, "/oauth/token"));
+            if (clientAuthError is not null)
+                return clientAuthError;
 
             if (!client.AllowsRedirectUri(redirectUri))
                 return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
@@ -519,7 +536,8 @@ public static class PdsHost
             HttpContext context,
             PdsService pds,
             IOAuthStore store,
-            DpopNonceService nonces) =>
+            DpopNonceService nonces,
+            ClientMetadataResolver resolver) =>
         {
             if (!context.Request.HasFormContentType)
                 return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
@@ -532,14 +550,98 @@ public static class PdsHost
                 return dpopError;
 
             string issuer = pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority);
+
+            // Resolve and authenticate the client: public clients use 'none', confidential clients
+            // present a private_key_jwt assertion. The client_id is pinned to the code/session, so a
+            // confidential client cannot be downgraded to the public path.
+            string? clientId = NullIfEmpty(form["client_id"].ToString());
+            if (clientId is null)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest, "client_id is required");
+            ClientMetadata client;
+            try
+            {
+                client = await resolver.ResolveAsync(clientId, context.RequestAborted);
+            }
+            catch (ClientMetadataException ex)
+            {
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, ex.ErrorCode, ex.Message);
+            }
+            IResult? clientAuthError = await AuthenticateClient(context, store, resolver, client, form, proof, issuer, OAuthEndpointUrl(pds, "/oauth/token"));
+            if (clientAuthError is not null)
+                return clientAuthError;
+
             return form["grant_type"].ToString() switch
             {
-                "authorization_code" => IssueFromCode(context, pds, store, nonces, form, proof, issuer),
+                "authorization_code" => IssueFromCode(context, pds, store, nonces, form, proof, issuer, client),
                 "refresh_token" => IssueFromRefresh(context, pds, store, nonces, form, proof, issuer),
                 _ => OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.UnsupportedGrantType,
                     "unsupported grant_type"),
             };
         }).RequireCors(OAuthCorsPolicy);
+
+    /// <summary>
+    /// Authenticate the token-request client. A public client authenticates with <c>none</c> and must
+    /// not present an assertion; a confidential client must present a valid <c>private_key_jwt</c>
+    /// assertion (RFC 7523), verified against its JWKS (inline or fetched from <c>jwks_uri</c>), with a
+    /// single-use <c>jti</c>. Returns a non-null error result to short-circuit, or null on success.
+    /// </summary>
+    private static async Task<IResult?> AuthenticateClient(
+        HttpContext context, IOAuthStore store, ClientMetadataResolver resolver, ClientMetadata client,
+        IFormCollection form, DpopProof proof, string issuer, string tokenEndpointUrl)
+    {
+        string? assertionType = NullIfEmpty(form["client_assertion_type"].ToString());
+        string? assertion = NullIfEmpty(form["client_assertion"].ToString());
+
+        if (!client.IsConfidential)
+        {
+            if (assertion is not null || assertionType is not null)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient,
+                    "this client authenticates with 'none' and must not present a client assertion");
+            return null;
+        }
+
+        if (assertion is null || assertionType is null)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient,
+                "this client must authenticate with a private_key_jwt client_assertion");
+        if (!string.Equals(assertionType, ClientAssertionValidator.JwtBearerAssertionType, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient,
+                "unsupported client_assertion_type");
+
+        JsonWebKeySet keys;
+        try
+        {
+            keys = client.JwksJson is not null
+                ? JsonWebKeySet.Parse(client.JwksJson)
+                : await resolver.FetchJwksAsync(client.JwksUri!, context.RequestAborted);
+        }
+        catch (ClientMetadataException ex)
+        {
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient, ex.Message);
+        }
+        catch (FormatException ex)
+        {
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient, $"client JWKS is invalid: {ex.Message}");
+        }
+
+        ClientAssertionResult result = ClientAssertionValidator.Validate(assertion, keys, new ClientAssertionOptions
+        {
+            ClientId = client.ClientId,
+            AcceptedAudiences = new[] { issuer, tokenEndpointUrl },
+        });
+        if (!result.IsValid)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient, result.Error);
+
+        // A client must not sign its DPoP proof with the same key it uses for the client assertion
+        // (atproto profile; the two keys serve different purposes and must stay distinct).
+        if (string.Equals(result.KeyThumbprint, proof.Jkt, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient,
+                "the DPoP proof must be signed with a different key than the client assertion");
+
+        if (!store.TryRegisterJti(result.Jti!, DateTimeOffset.FromUnixTimeSeconds(result.ExpiresAt!.Value)))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidClient,
+                "client assertion has already been used");
+        return null;
+    }
 
     /// <summary>
     /// Run the shared DPoP gate for a token-style endpoint: validate the proof against the endpoint,
@@ -571,7 +673,7 @@ public static class PdsHost
         return null;
     }
 
-    private static IResult IssueFromCode(HttpContext context, PdsService pds, IOAuthStore store, DpopNonceService nonces, IFormCollection form, DpopProof proof, string issuer)
+    private static IResult IssueFromCode(HttpContext context, PdsService pds, IOAuthStore store, DpopNonceService nonces, IFormCollection form, DpopProof proof, string issuer, ClientMetadata client)
     {
         string? code = NullIfEmpty(form["code"].ToString());
         string? redirectUri = NullIfEmpty(form["redirect_uri"].ToString());
@@ -616,7 +718,7 @@ public static class PdsHost
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        DateTimeOffset sessionExpiry = now.Add(PublicSessionLifetime);
+        DateTimeOffset sessionExpiry = now.Add(client.IsConfidential ? ConfidentialSessionLifetime : PublicSessionLifetime);
         store.SaveSession(new OAuthSession(sessionId, authCode.ClientId, authCode.Did, authCode.Scope, authCode.DpopJkt, now, sessionExpiry));
 
         string accessToken = IssueAccessToken(pds, authCode.Did, authCode.Scope, authCode.DpopJkt, issuer, now);

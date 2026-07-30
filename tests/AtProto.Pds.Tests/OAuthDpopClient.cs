@@ -9,13 +9,21 @@ namespace AtProto.Pds.Tests;
 // requests without a browser or an external client. The public thumbprint is the jkt tokens bind to.
 internal sealed class OAuthDpopClient : IDisposable
 {
-    private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+    private readonly ECDsa _key;
 
     public EcPublicJwk PublicJwk { get; }
 
     public string Jkt => PublicJwk.Thumbprint();
 
-    public OAuthDpopClient() => PublicJwk = EcPublicJwk.FromP256(_key.ExportParameters(false));
+    public OAuthDpopClient() : this(ECDsa.Create(ECCurve.NamedCurves.nistP256)) { }
+
+    // Take ownership of an existing key, so a test can bind the DPoP proof and a client assertion to
+    // the same key (to exercise the "keys must differ" rule).
+    public OAuthDpopClient(ECDsa key)
+    {
+        _key = key;
+        PublicJwk = EcPublicJwk.FromP256(key.ExportParameters(false));
+    }
 
     // Build a DPoP proof for a request. A null nonce/ath omits that claim; iat defaults to now, and an
     // explicit iat lets a test forge a stale or future proof.
