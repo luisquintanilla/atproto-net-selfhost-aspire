@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using System.Text.Json;
 using AtProto.Cbor;
 using AtProto.Firehose;
@@ -39,6 +40,14 @@ public static class PdsHost
             .WithMethods("GET", "POST", "OPTIONS")
             .WithHeaders("Authorization", "DPoP", "Content-Type")
             .WithExposedHeaders("DPoP-Nonce", "WWW-Authenticate")));
+        // The DPoP nonce secret is per-process: a restart invalidates outstanding nonces, and the
+        // client simply retries after a use_dpop_nonce challenge, so no durable secret is needed.
+        builder.Services.AddSingleton(new DpopNonceService(RandomNumberGenerator.GetBytes(32)));
+        builder.Services.AddSingleton(_ => new ClientMetadataResolver(new ClientMetadataResolverOptions
+        {
+            AllowConfidentialClients = false,
+            AllowLocalhostClient = true,
+        }));
         builder.Services.AddHostedService<PdsInstanceAdvertiser>();
 
         WebApplication app = builder.Build();
@@ -53,11 +62,15 @@ public static class PdsHost
         MapSync(app);
         MapIdentity(app);
         MapOAuthMetadata(app);
+        MapOAuthPar(app);
         return app;
     }
 
     /// <summary>The CORS policy applied to the OAuth surface so browser apps can call it cross-origin.</summary>
     internal const string OAuthCorsPolicy = "oauth";
+
+    /// <summary>The lifetime of a pushed authorization request's <c>request_uri</c>, in seconds.</summary>
+    private const int ParTtlSeconds = 60;
 
     /// <summary>Register the storage seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
     private static void RegisterPersistence(IServiceCollection services, PdsOptions options)
@@ -140,6 +153,147 @@ public static class PdsHost
                 AuthorizationServerMetadata.ForIssuer(pds.Identity.PublicUrl).ToJson(),
                 "application/json"))
             .RequireCors(OAuthCorsPolicy);
+    }
+
+    /// <summary>
+    /// The pushed authorization request endpoint (RFC 9126, atproto profile). The client posts every
+    /// authorization parameter here over a DPoP-proofed request and receives a single-use
+    /// <c>request_uri</c> that stands in for those parameters at the authorize endpoint. This is where
+    /// the DPoP key thumbprint is bound to the pending authorization, the client-metadata document is
+    /// resolved and validated, and PKCE/redirect_uri/scope are checked up front.
+    /// </summary>
+    private static void MapOAuthPar(WebApplication app) =>
+        app.MapPost("/oauth/par", async (
+            HttpContext context,
+            PdsService pds,
+            IOAuthStore store,
+            ClientMetadataResolver resolver,
+            DpopNonceService nonces) =>
+        {
+            if (!context.Request.HasFormContentType)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
+                    "request must be application/x-www-form-urlencoded");
+
+            IFormCollection form = await context.Request.ReadFormAsync(context.RequestAborted);
+
+            // The DPoP proof is mandatory on PAR; it binds the token-holder key (jkt) to the request.
+            // htu is derived from the advertised endpoint, not the incoming request, so it stays
+            // correct behind a TLS-terminating reverse proxy.
+            string htu = OAuthEndpointUrl(pds, "/oauth/par");
+            DpopValidationResult dpop = DpopValidator.Validate(
+                context.Request.Headers["DPoP"].ToString(),
+                new DpopValidationOptions { ExpectedHtm = "POST", ExpectedHtu = htu },
+                nonces);
+            if (dpop.Status == DpopValidationStatus.NonceRequired)
+            {
+                context.Response.Headers["DPoP-Nonce"] = nonces.Current();
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.UseDpopNonce,
+                    "authorization server requires a DPoP nonce");
+            }
+            if (!dpop.IsValid)
+            {
+                context.Response.Headers["DPoP-Nonce"] = nonces.Current();
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidDpopProof, dpop.Error);
+            }
+            DpopProof proof = dpop.Proof!;
+
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            // Reject a replayed proof. The jti is retained for the nonce acceptance window.
+            if (!store.TryRegisterJti(proof.Jti, now.AddMinutes(10)))
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidDpopProof,
+                    "DPoP proof has already been used");
+
+            // RFC 9126 section 2.1: the PAR endpoint must reject a request_uri parameter.
+            if (!string.IsNullOrEmpty(form["request_uri"]))
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
+                    "request_uri is not allowed at the PAR endpoint");
+
+            string? clientId = NullIfEmpty(form["client_id"].ToString());
+            if (clientId is null)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest, "client_id is required");
+
+            if (form["response_type"] != "code")
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest, "response_type must be 'code'");
+
+            string? redirectUri = NullIfEmpty(form["redirect_uri"].ToString());
+            if (redirectUri is null)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest, "redirect_uri is required");
+
+            string? codeChallenge = NullIfEmpty(form["code_challenge"].ToString());
+            if (codeChallenge is null)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest, "code_challenge is required");
+            if (form["code_challenge_method"] != Pkce.MethodS256)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest, "code_challenge_method must be 'S256'");
+
+            string scope = form["scope"].ToString();
+            if (string.IsNullOrWhiteSpace(scope))
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidScope, "scope is required");
+            string? state = NullIfEmpty(form["state"].ToString());
+            string? loginHint = NullIfEmpty(form["login_hint"].ToString());
+
+            // Resolve and validate the client's metadata document (SSRF-hardened; localhost synthesized).
+            ClientMetadata client;
+            try
+            {
+                client = await resolver.ResolveAsync(clientId, context.RequestAborted);
+            }
+            catch (ClientMetadataException ex)
+            {
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, ex.ErrorCode, ex.Message);
+            }
+
+            if (!client.AllowsRedirectUri(redirectUri))
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
+                    "redirect_uri is not registered for this client");
+
+            string[] requestedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (!client.AllowsScopes(requestedScopes))
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidScope,
+                    "requested scope exceeds the client's registered scope");
+            foreach (string s in requestedScopes)
+                if (!AuthorizationServerMetadata.DefaultScopes.Contains(s))
+                    return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidScope,
+                        $"unsupported scope '{s}'");
+
+            string requestUri = OAuthIds.NewRequestUri();
+            store.SaveParRequest(new ParRequest(
+                RequestUri: requestUri,
+                ClientId: clientId,
+                ResponseType: "code",
+                RedirectUri: redirectUri,
+                Scope: scope,
+                CodeChallenge: codeChallenge,
+                CodeChallengeMethod: Pkce.MethodS256,
+                State: state,
+                DpopJkt: proof.Jkt,
+                LoginHint: loginHint,
+                CreatedAt: now,
+                ExpiresAt: now.AddSeconds(ParTtlSeconds)));
+
+            context.Response.Headers["DPoP-Nonce"] = nonces.Current();
+            context.Response.Headers.CacheControl = "no-store";
+            string body = JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["request_uri"] = requestUri,
+                ["expires_in"] = ParTtlSeconds,
+            });
+            return Results.Content(body, "application/json", null, StatusCodes.Status201Created);
+        }).RequireCors(OAuthCorsPolicy);
+
+    /// <summary>The absolute URL of an OAuth endpoint, derived from the advertised issuer origin.</summary>
+    private static string OAuthEndpointUrl(PdsService pds, string path) =>
+        pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority) + path;
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
+
+    /// <summary>Write a standard OAuth JSON error body (<c>error</c> + optional <c>error_description</c>).</summary>
+    private static IResult OAuthJsonError(HttpContext context, int status, string error, string? description)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        var payload = new Dictionary<string, string>(StringComparer.Ordinal) { ["error"] = error };
+        if (!string.IsNullOrEmpty(description))
+            payload["error_description"] = description;
+        return Results.Content(JsonSerializer.Serialize(payload), "application/json", null, status);
     }
 
     private static void MapServer(WebApplication app)

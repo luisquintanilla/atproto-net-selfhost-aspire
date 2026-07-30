@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\core\AtProto.Repo\AtProto.Repo.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Crypto\AtProto.Crypto.csproj" />
     <ProjectReference Include="..\..\src\core\AtProto.Cbor\AtProto.Cbor.csproj" />
+    <ProjectReference Include="..\..\src\core\AtProto.OAuth\AtProto.OAuth.csproj" />
   </ItemGroup>
 
 </Project>
