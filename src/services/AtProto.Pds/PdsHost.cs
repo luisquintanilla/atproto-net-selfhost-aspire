@@ -63,6 +63,7 @@ public static class PdsHost
         MapIdentity(app);
         MapOAuthMetadata(app);
         MapOAuthPar(app);
+        MapOAuthAuthorize(app);
         return app;
     }
 
@@ -70,7 +71,13 @@ public static class PdsHost
     internal const string OAuthCorsPolicy = "oauth";
 
     /// <summary>The lifetime of a pushed authorization request's <c>request_uri</c>, in seconds.</summary>
-    private const int ParTtlSeconds = 60;
+    private const int ParTtlSeconds = 300;
+
+    /// <summary>The lifetime of an issued authorization code, in seconds (exchanged immediately).</summary>
+    private const int AuthorizationCodeTtlSeconds = 60;
+
+    /// <summary>The double-submit CSRF cookie for the authorization interface forms.</summary>
+    private const string OAuthCsrfCookie = "oauth_csrf";
 
     /// <summary>Register the storage seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
     private static void RegisterPersistence(IServiceCollection services, PdsOptions options)
@@ -294,6 +301,204 @@ public static class PdsHost
         if (!string.IsNullOrEmpty(description))
             payload["error_description"] = description;
         return Results.Content(JsonSerializer.Serialize(payload), "application/json", null, status);
+    }
+
+    /// <summary>
+    /// The authorization interface (atproto profile). A <c>GET</c> renders a combined sign-in and
+    /// consent page for the pending pushed request; the <c>POST</c> authenticates the account with its
+    /// password, and on approval mints a single-use authorization code and redirects back to the client
+    /// with <c>code</c>, the echoed <c>state</c>, and the <c>iss</c> identifier. Only the verifiable
+    /// <c>client_id</c> URL is shown (never an unverified client name or logo), which is the profile's
+    /// impersonation defense.
+    /// </summary>
+    private static void MapOAuthAuthorize(WebApplication app)
+    {
+        app.MapGet("/oauth/authorize", (HttpContext context, PdsService pds, IOAuthStore store) =>
+        {
+            string? clientId = NullIfEmpty(context.Request.Query["client_id"].ToString());
+            string? requestUri = NullIfEmpty(context.Request.Query["request_uri"].ToString());
+
+            ParRequest? par = ValidatePendingRequest(store, clientId, requestUri);
+            if (par is null)
+                return AuthorizeErrorPage(context);
+
+            string csrf = IssueCsrfCookie(context);
+            return AuthorizePage(context, par, csrf, par.LoginHint, error: null);
+        });
+
+        app.MapPost("/oauth/authorize", async (HttpContext context, PdsService pds, IOAuthStore store) =>
+        {
+            if (!context.Request.HasFormContentType)
+                return AuthorizeErrorPage(context);
+            IFormCollection form = await context.Request.ReadFormAsync(context.RequestAborted);
+
+            string? clientId = NullIfEmpty(form["client_id"].ToString());
+            string? requestUri = NullIfEmpty(form["request_uri"].ToString());
+            ParRequest? par = ValidatePendingRequest(store, clientId, requestUri);
+            if (par is null)
+                return AuthorizeErrorPage(context);
+
+            // Double-submit CSRF: the cookie set on the GET must match the posted hidden field.
+            if (!CsrfMatches(context, form["csrf"].ToString()))
+                return AuthorizeErrorPage(context);
+
+            string issuer = pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority);
+
+            // Denial is a normal, spec-defined outcome: redirect with access_denied.
+            if (form["action"] != "approve")
+            {
+                store.DeleteParRequest(par.RequestUri);
+                return RedirectToClient(par.RedirectUri, new Dictionary<string, string?>
+                {
+                    ["error"] = OAuthErrors.AccessDenied,
+                    ["state"] = par.State,
+                    ["iss"] = issuer,
+                });
+            }
+
+            string identifier = form["identifier"].ToString();
+            Account? account = pds.Accounts.Resolve(identifier);
+            if (account is null || !AccountStore.VerifyPassword(form["password"].ToString(), account.PasswordSalt, account.PasswordHash))
+            {
+                // Re-render with a fresh CSRF token; the pending request is untouched.
+                string csrf = IssueCsrfCookie(context);
+                return AuthorizePage(context, par, csrf, identifier, "Invalid identifier or password.");
+            }
+
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            string code = OAuthIds.NewCode();
+            store.SaveAuthorizationCode(new AuthorizationCode(
+                Code: code,
+                ClientId: par.ClientId,
+                Did: account.Did,
+                RedirectUri: par.RedirectUri,
+                Scope: par.Scope,
+                CodeChallenge: par.CodeChallenge,
+                CodeChallengeMethod: par.CodeChallengeMethod,
+                DpopJkt: par.DpopJkt,
+                CreatedAt: now,
+                ExpiresAt: now.AddSeconds(AuthorizationCodeTtlSeconds)));
+            store.DeleteParRequest(par.RequestUri);
+
+            return RedirectToClient(par.RedirectUri, new Dictionary<string, string?>
+            {
+                ["code"] = code,
+                ["state"] = par.State,
+                ["iss"] = issuer,
+            });
+        });
+    }
+
+    /// <summary>Look up a pending PAR by <c>request_uri</c> and confirm it is unexpired and client-matched.</summary>
+    private static ParRequest? ValidatePendingRequest(IOAuthStore store, string? clientId, string? requestUri)
+    {
+        if (clientId is null || requestUri is null)
+            return null;
+        ParRequest? par = store.GetParRequest(requestUri);
+        if (par is null || par.ExpiresAt <= DateTimeOffset.UtcNow)
+            return null;
+        return string.Equals(par.ClientId, clientId, StringComparison.Ordinal) ? par : null;
+    }
+
+    private static string IssueCsrfCookie(HttpContext context)
+    {
+        string token = RandomNumberGenerator.GetHexString(64, lowercase: true);
+        context.Response.Cookies.Append(OAuthCsrfCookie, token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = context.Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            Path = "/oauth",
+        });
+        return token;
+    }
+
+    private static bool CsrfMatches(HttpContext context, string posted)
+    {
+        string? cookie = context.Request.Cookies[OAuthCsrfCookie];
+        if (string.IsNullOrEmpty(cookie) || string.IsNullOrEmpty(posted))
+            return false;
+        return CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.UTF8.GetBytes(cookie),
+            System.Text.Encoding.UTF8.GetBytes(posted));
+    }
+
+    private static IResult RedirectToClient(string redirectUri, IDictionary<string, string?> parameters) =>
+        Results.Redirect(Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUri, parameters));
+
+    private static IResult AuthorizePage(HttpContext context, ParRequest par, string csrf, string? identifier, string? error)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        static string Enc(string? s) => System.Net.WebUtility.HtmlEncode(s ?? string.Empty);
+
+        string errorHtml = error is null
+            ? string.Empty
+            : $"<p class=\"error\">{Enc(error)}</p>";
+        string scopeItems = string.Join("", par.Scope
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => $"<li><code>{Enc(s)}</code></li>"));
+
+        string html = $$"""
+            <!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Sign in</title>
+              <style>
+                body { font-family: system-ui, sans-serif; max-width: 26rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
+                h1 { font-size: 1.25rem; }
+                .client { background: #f4f4f5; border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; word-break: break-all; }
+                label { display: block; margin: 1rem 0 .25rem; font-weight: 600; font-size: .9rem; }
+                input { width: 100%; padding: .55rem; border: 1px solid #c8c8cc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+                .actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
+                button { flex: 1; padding: .6rem; border-radius: 6px; border: 0; font-size: 1rem; cursor: pointer; }
+                .approve { background: #2f6f4f; color: #fff; }
+                .deny { background: #e5e5e7; color: #1a1a1a; }
+                .error { background: #fde8e8; color: #9b1c1c; padding: .6rem .8rem; border-radius: 6px; font-size: .9rem; }
+                ul { margin: .25rem 0; }
+              </style>
+            </head>
+            <body>
+              <h1>Authorize access</h1>
+              <p>The application at this URL is requesting access to your account:</p>
+              <p class="client">{{Enc(par.ClientId)}}</p>
+              <p>Requested scopes:</p>
+              <ul>{{scopeItems}}</ul>
+              {{errorHtml}}
+              <form method="post" action="/oauth/authorize" autocomplete="off">
+                <input type="hidden" name="client_id" value="{{Enc(par.ClientId)}}">
+                <input type="hidden" name="request_uri" value="{{Enc(par.RequestUri)}}">
+                <input type="hidden" name="csrf" value="{{Enc(csrf)}}">
+                <label for="identifier">Handle or DID</label>
+                <input id="identifier" name="identifier" value="{{Enc(identifier)}}" autocapitalize="none" autocorrect="off">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password">
+                <div class="actions">
+                  <button class="deny" type="submit" name="action" value="deny">Deny</button>
+                  <button class="approve" type="submit" name="action" value="approve">Approve</button>
+                </div>
+              </form>
+            </body>
+            </html>
+            """;
+        return Results.Content(html, "text/html; charset=utf-8");
+    }
+
+    private static IResult AuthorizeErrorPage(HttpContext context)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        const string html = """
+            <!doctype html>
+            <html lang="en">
+            <head><meta charset="utf-8"><title>Request invalid</title></head>
+            <body style="font-family: system-ui, sans-serif; max-width: 26rem; margin: 3rem auto;">
+              <h1>This request is invalid</h1>
+              <p>The authorization request has expired or could not be found. Please start again from the application.</p>
+            </body>
+            </html>
+            """;
+        return Results.Content(html, "text/html; charset=utf-8", null, StatusCodes.Status400BadRequest);
     }
 
     private static void MapServer(WebApplication app)
