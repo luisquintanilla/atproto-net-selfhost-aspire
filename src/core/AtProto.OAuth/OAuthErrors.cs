@@ -25,6 +25,9 @@ public static class OAuthErrors
     /// <summary>The access token presented to a resource was invalid or expired (RFC 6750).</summary>
     public const string InvalidToken = "invalid_token";
 
+    /// <summary>The access token's scope does not grant the requested action (RFC 6750).</summary>
+    public const string InsufficientScope = "insufficient_scope";
+
     /// <summary>The client-metadata document was missing, unreachable, or invalid.</summary>
     public const string InvalidClientMetadata = "invalid_client_metadata";
 }

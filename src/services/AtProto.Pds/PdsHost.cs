@@ -699,6 +699,102 @@ public static class PdsHost
         return Results.Content(body, "application/json", null, StatusCodes.Status200OK);
     }
 
+    // Resource-server (RS) enforcement: accept a DPoP-bound OAuth access token on write endpoints,
+    // additively to the app-password session Bearer JWT.
+
+    /// <summary>
+    /// Authenticate a write request by either a DPoP-bound OAuth access token (the atproto profile) or
+    /// the app-password session <c>Bearer</c> JWT. The two paths are additive: a client may present
+    /// either. A DPoP <c>Authorization</c> scheme selects the OAuth path; anything else falls through to
+    /// the existing session path, so app passwords keep working unchanged.
+    /// </summary>
+    private static Account AuthenticateWrite(HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces)
+    {
+        string authorization = ctx.Request.Headers.Authorization.ToString();
+        if (authorization.StartsWith("DPoP ", StringComparison.OrdinalIgnoreCase))
+            return AuthenticateDpopAccess(ctx, pds, store, nonces, authorization["DPoP ".Length..].Trim());
+        return pds.Authenticate(ctx.Request.Headers.Authorization);
+    }
+
+    /// <summary>
+    /// Validate a DPoP-bound access token on a resource request (RFC 9449 section 7): the access token
+    /// itself (signature, issuer, expiry), the accompanying proof bound to it (<c>cnf.jkt</c> match,
+    /// <c>htm</c>/<c>htu</c>/<c>ath</c>, server nonce, <c>jti</c> replay), and the write scope. A missing
+    /// or stale nonce, or a replayed proof, returns a recoverable challenge with a fresh
+    /// <c>DPoP-Nonce</c>; the client retries. On success a fresh resource-server nonce is advertised.
+    /// </summary>
+    private static Account AuthenticateDpopAccess(HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces, string accessToken)
+    {
+        string issuer = pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority);
+        if (!AccessToken.TryValidate(accessToken, pds.Identity.JwtSecret, issuer, out AccessTokenClaims claims))
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidToken,
+                "the access token is invalid or expired", refreshNonce: false);
+
+        DpopValidationResult result = DpopValidator.Validate(
+            ctx.Request.Headers["DPoP"].ToString(),
+            new DpopValidationOptions
+            {
+                ExpectedHtm = ctx.Request.Method,
+                ExpectedHtu = OAuthEndpointUrl(pds, ctx.Request.Path),
+                AccessToken = accessToken,
+            },
+            nonces);
+        if (result.Status == DpopValidationStatus.NonceRequired)
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.UseDpopNonce,
+                "resource server requires a DPoP nonce", refreshNonce: true);
+        if (!result.IsValid)
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidDpopProof,
+                result.Error, refreshNonce: true);
+
+        DpopProof proof = result.Proof!;
+        if (!string.Equals(claims.ConfirmationJkt, proof.Jkt, StringComparison.Ordinal))
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidToken,
+                "the access token is not bound to this DPoP key", refreshNonce: false);
+        if (!store.TryRegisterJti(proof.Jti, DateTimeOffset.UtcNow.AddMinutes(10)))
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidDpopProof,
+                "DPoP proof has already been used", refreshNonce: true);
+        if (!ScopeGrants(claims.Scope, WriteScope))
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status403Forbidden, OAuthErrors.InsufficientScope,
+                $"this action requires the {WriteScope} scope", refreshNonce: false);
+
+        Account account = pds.Accounts.ByDid(claims.Subject)
+            ?? throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidToken,
+                "unknown account", refreshNonce: false);
+
+        ctx.Response.Headers["DPoP-Nonce"] = nonces.Current();
+        return account;
+    }
+
+    /// <summary>The transitional scope that maps to the app-password write level.</summary>
+    private const string WriteScope = "transition:generic";
+
+    /// <summary>True when a space-delimited <c>scope</c> string grants the required scope.</summary>
+    private static bool ScopeGrants(string scope, string required)
+    {
+        foreach (string part in scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (string.Equals(part, required, StringComparison.Ordinal))
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Build an RFC 9449 resource-server challenge: set <c>WWW-Authenticate: DPoP</c> (and a fresh
+    /// <c>DPoP-Nonce</c> when the client should retry), then return an <see cref="XrpcException"/>
+    /// carrying the error for the JSON body. Headers set here persist because the response has not
+    /// started when the exception middleware writes the status and body.
+    /// </summary>
+    private static XrpcException ResourceChallenge(HttpContext ctx, DpopNonceService nonces, int status, string error, string? description, bool refreshNonce)
+    {
+        if (refreshNonce)
+            ctx.Response.Headers["DPoP-Nonce"] = nonces.Current();
+        string challenge = $"DPoP error=\"{error}\"";
+        if (!string.IsNullOrEmpty(description))
+            challenge += $", error_description=\"{description}\"";
+        challenge += ", algs=\"ES256\"";
+        ctx.Response.Headers.WWWAuthenticate = challenge;
+        return new XrpcException(status, error, description ?? error);
+    }
+
     private static void MapServer(WebApplication app)
     {
         app.MapGet("/xrpc/com.atproto.server.describeServer", (PdsService pds) => Results.Ok(new
@@ -745,9 +841,9 @@ public static class PdsHost
 
     private static void MapRepo(WebApplication app)
     {
-        app.MapPost("/xrpc/com.atproto.repo.createRecord", (CreateRecordRequest req, HttpContext ctx, PdsService pds) =>
+        app.MapPost("/xrpc/com.atproto.repo.createRecord", (CreateRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces) =>
         {
-            Account account = pds.Authenticate(ctx.Request.Headers.Authorization);
+            Account account = AuthenticateWrite(ctx, pds, store, nonces);
             RequireRepo(pds, account, req.Repo);
             object record = DataModel.FromJson(req.Record)
                 ?? throw new XrpcException(400, "InvalidRequest", "Record must be an object.");
@@ -764,9 +860,9 @@ public static class PdsHost
             });
         });
 
-        app.MapPost("/xrpc/com.atproto.repo.putRecord", (PutRecordRequest req, HttpContext ctx, PdsService pds) =>
+        app.MapPost("/xrpc/com.atproto.repo.putRecord", (PutRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces) =>
         {
-            Account account = pds.Authenticate(ctx.Request.Headers.Authorization);
+            Account account = AuthenticateWrite(ctx, pds, store, nonces);
             RequireRepo(pds, account, req.Repo);
             object record = DataModel.FromJson(req.Record)
                 ?? throw new XrpcException(400, "InvalidRequest", "Record must be an object.");
@@ -780,9 +876,9 @@ public static class PdsHost
             });
         });
 
-        app.MapPost("/xrpc/com.atproto.repo.deleteRecord", (DeleteRecordRequest req, HttpContext ctx, PdsService pds) =>
+        app.MapPost("/xrpc/com.atproto.repo.deleteRecord", (DeleteRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces) =>
         {
-            Account account = pds.Authenticate(ctx.Request.Headers.Authorization);
+            Account account = AuthenticateWrite(ctx, pds, store, nonces);
             RequireRepo(pds, account, req.Repo);
             CommitResult result = pds.Commit(account, new[] { RepoWrite.Delete(req.Collection, req.Rkey) });
             return Results.Ok(new { commit = new { cid = result.Commit.ToString(), rev = result.Rev } });
@@ -821,9 +917,9 @@ public static class PdsHost
 
     private static void MapBlob(WebApplication app)
     {
-        app.MapPost("/xrpc/com.atproto.repo.uploadBlob", async (HttpContext ctx, PdsService pds, BlobStore blobs, IPdsPersistence persistence) =>
+        app.MapPost("/xrpc/com.atproto.repo.uploadBlob", async (HttpContext ctx, PdsService pds, BlobStore blobs, IPdsPersistence persistence, IOAuthStore store, DpopNonceService nonces) =>
         {
-            _ = pds.Authenticate(ctx.Request.Headers.Authorization);
+            _ = AuthenticateWrite(ctx, pds, store, nonces);
 
             using var body = new MemoryStream();
             await ctx.Request.Body.CopyToAsync(body, ctx.RequestAborted);
