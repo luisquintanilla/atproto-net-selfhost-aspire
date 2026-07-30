@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\core\AtProto.Crypto\AtProto.Crypto.csproj" />
     <ProjectReference Include="..\..\core\AtProto.Repo\AtProto.Repo.csproj" />
     <ProjectReference Include="..\..\core\AtProto.Firehose\AtProto.Firehose.csproj" />
+    <ProjectReference Include="..\..\core\AtProto.OAuth\AtProto.OAuth.csproj" />
     <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />
   </ItemGroup>
 

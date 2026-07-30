@@ -30,6 +30,7 @@ public static class PdsHost
         builder.Services.AddSingleton<AccountStore>();
         builder.Services.AddSingleton<BlobStore>();
         RegisterPersistence(builder.Services, options);
+        RegisterOAuthStore(builder.Services, options);
         builder.Services.AddSingleton<PdsService>();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<PdsInstanceAdvertiser>();
@@ -60,6 +61,27 @@ public static class PdsHost
         else
         {
             services.AddSingleton<IPdsPersistence, NullPdsPersistence>();
+        }
+    }
+
+    /// <summary>Register the OAuth store seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
+    private static void RegisterOAuthStore(IServiceCollection services, PdsOptions options)
+    {
+        if (string.Equals(options.Storage, "sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            // A sibling database to pds.db keeps the ephemeral OAuth write path from contending with
+            // the repository write path on a single connection.
+            string basePath = string.IsNullOrWhiteSpace(options.SqlitePath)
+                ? Path.Combine(Environment.CurrentDirectory, "pds.db")
+                : options.SqlitePath;
+            string oauthPath = Path.Combine(
+                Path.GetDirectoryName(Path.GetFullPath(basePath)) ?? Environment.CurrentDirectory,
+                "oauth.db");
+            services.AddSingleton<IOAuthStore>(_ => new SqliteOAuthStore(oauthPath));
+        }
+        else
+        {
+            services.AddSingleton<IOAuthStore, InMemoryOAuthStore>();
         }
     }
 
