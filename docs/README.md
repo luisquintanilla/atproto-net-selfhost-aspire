@@ -14,6 +14,7 @@ This project is a self-hosted AT Protocol stack in .NET. It gives you a Personal
 8. [Extending](extending.md), build on the stack: reuse a library, add a lexicon, build a projection, swap storage, compose a topology.
 9. [Storage profiles](storage.md), run the durable production profile (SQLite PDS) instead of in-memory.
 10. [Analytics view](analytics.md), the DuckDB OLAP projection that production adds over the same firehose.
+11. [OAuth authorization server](oauth.md), how a real third-party client logs in and writes to a repo with PAR, PKCE, and DPoP.
 
 ## Docs map
 
@@ -25,10 +26,11 @@ This project is a self-hosted AT Protocol stack in .NET. It gives you a Personal
 | [Reactive design](reactive-design.md) | The .NET dataflow rule: pull ingest, `IObservable` seam, Rx projection, SignalR push. |
 | [Services](services.md) | PDS, Relay, and AppView endpoint reference, config, and standalone run commands. |
 | [Scenarios](scenarios.md) | Why the project exists, anchored on Statusphere and self-hosted atproto use cases. |
-| [Packaging](packaging.md) | The nine extractable libraries, the layering that keeps the core service-free, and how preview packages are built. |
+| [Packaging](packaging.md) | The ten extractable libraries, the layering that keeps the core service-free, and how preview packages are built. |
 | [Extending](extending.md) | The cookbook for building on the stack: reuse a library, define a lexicon, index a different collection, build your own projection, add an endpoint, swap storage, compose a topology, and what is left for production. |
 | [Storage profiles](storage.md) | The dev (in-memory, default) vs production (durable SQLite PDS) profiles: the toggle, the SQLite schema, and what survives a restart. |
 | [Analytics view](analytics.md) | The DuckDB OLAP projection production adds: a second AppView over the same firehose for totals, rates, top-N, and breakdowns. |
+| [OAuth authorization server](oauth.md) | The atproto OAuth profile: the trust chain, the PAR/PKCE/DPoP flow, the threat model, and how to bring your own client. |
 | [Implementation plan](plan.md) | Dense implementation log and milestone evidence. Start there only if you want history. |
 
 If you are new to atproto, read the primer first. If you already know the protocol, jump to the architecture and services references.

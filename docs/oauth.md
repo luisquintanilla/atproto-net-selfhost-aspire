@@ -132,8 +132,9 @@ The client starts from your handle or DID and finishes with a token it can use t
     |    <---- 200 (or 400 use_dpop_nonce) -- |  scope; write to repo; issue nonce   |
 ```
 
-> The polished SVG version of this sequence lives alongside the other diagrams in `docs/img/` and is
-> embedded here once generated (see the [packaging step](#code-pointers)).
+> The polished SVG version of this sequence:
+
+![OAuth login flow: the client discovers and verifies the server, pushes the request (PAR), sends you to the browser to log in and consent, exchanges the code for sender-constrained DPoP-bound tokens, and writes to your repo with a fresh proof on every request.](img/oauth-flow.svg)
 
 Read the numbered steps as: **discover** the server and verify it is really yours (1 to 3),
 **push** the request and get a handle (4), **log in and consent** in the browser (5), **exchange** the
@@ -156,6 +157,8 @@ not an impostor. atproto anchors that trust in your DID:
 Because identity flows from the DID, and the DID document is served by the PDS, the chain
 handle -> DID -> PDS -> RS metadata -> AS metadata -> `issuer` closes on itself. There is no central
 registry to trust.
+
+![The DID-anchored trust chain: a handle resolves to a DID, the DID document advertises the #atproto_pds endpoint, the PDS protected-resource metadata names the authorization server, and the AS metadata issuer must equal the PDS origin. The chain closes on itself, so a login can only succeed against the server your identity points at.](img/oauth-trust-chain.svg)
 
 ## What the PDS serves
 
@@ -271,19 +274,21 @@ proofs are never rejected.
 
 ## What ships first (the MVP boundary)
 
-**In the first cut:**
+**Shipped:**
 
 - Public clients (`token_endpoint_auth_method = none`) and the `http://localhost` dev client.
+- Confidential clients (`private_key_jwt` client assertions with `jwks` / `jwks_uri`), including the
+  key-continuity binding that requires the client-assertion key to differ from the DPoP key. Confidential
+  sessions get a longer lifetime than public ones.
 - The `atproto` and `transition:generic` scopes.
 - The full PAR, PKCE, DPoP-with-nonces, and DID-anchored discovery machinery above.
 - RS enforcement on the write endpoints, additive to the existing session-JWT path.
 - An in-memory store by default, and a durable SQLite store under the production profile.
 
-**Fast follow (designed for, not in the first cut):**
+**Fast follow (designed for, not yet in):**
 
-- Confidential clients (`private_key_jwt` client assertions with `jwks` / `jwks_uri`, key-continuity
-  binding).
-- The remaining transitional scopes and granular permission scopes.
+- The remaining transitional scopes (`transition:chat.bsky`, `transition:email`) and granular
+  permission scopes.
 
 Keeping the boundary explicit means the first cut is small enough to verify thoroughly, and the deferred
 items have a clear home.
@@ -294,7 +299,8 @@ Self-verification is a first-class deliverable, because OAuth is hard to eyeball
 
 1. **In-process integration tests** drive the whole flow (PAR, authorize, token, DPoP-authorized write)
    with a purpose-built test client, plus a negative matrix (replay, wrong key, PKCE mismatch, reused
-   code, reused refresh, SSRF-blocked metadata, missing-nonce retry).
+   code, reused refresh, SSRF-blocked metadata, missing-nonce retry, and confidential-client assertion
+   misuse).
 2. **A real reference client.** The primary path is the pure-.NET `CarpaNet.OAuth` client library, so
    the whole interop check stays in the .NET toolchain. The official TypeScript
    `@atproto/oauth-client-node` is the secondary cross-check. Both drive a login and an authorized write
@@ -303,8 +309,8 @@ Self-verification is a first-class deliverable, because OAuth is hard to eyeball
    RFC 9449 (DPoP).
 
 Real external clients fetch your `client-metadata.json` and follow redirects, so true end-to-end interop
-needs the PDS reachable over HTTPS (a TLS tunnel in local development is enough). The interop test doc
-records the exact procedure.
+needs the PDS reachable over HTTPS (a TLS tunnel in local development is enough). The
+[OAuth interop guide](oauth-interop.md) records the exact procedure for all three layers.
 
 ## Code pointers
 

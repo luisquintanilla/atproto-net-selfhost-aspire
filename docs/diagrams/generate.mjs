@@ -449,11 +449,11 @@ D["packaging"] = () => {
     { role: "Firehose / ingest", color: C.relay, pkgs: [["AtProto.Firehose", C.relay]] },
     { role: "Repository", color: C.pds, pkgs: [["AtProto.Repo", C.pds]] },
     { role: "Encodings + identity", color: C.pds, pkgs: [["AtProto.Car", C.pds], ["AtProto.Cbor", C.pds], ["AtProto.Identity", C.you]] },
-    { role: "Primitives", color: C.you, pkgs: [["AtProto.Cid", C.you], ["AtProto.Crypto", C.you], ["AtProto.Lexicon", C.you]] },
+    { role: "Primitives", color: C.you, pkgs: [["AtProto.Cid", C.you], ["AtProto.Crypto", C.you], ["AtProto.Lexicon", C.you], ["AtProto.OAuth", C.pds]] },
   ];
   const ys = bands.map((_, i) => top + i * (bh + gap));
   let b = `<text x="30" y="58" fill="${C.text}" font-size="21" font-weight="700">Extractable libraries, layered</text>
-  <text x="31" y="80" fill="${C.muted}" font-size="13">Nine preview packages. Each layer depends only on the ones below it, and the core never references a service.</text>`;
+  <text x="31" y="80" fill="${C.muted}" font-size="13">Ten preview packages. Each layer depends only on the ones below it, and the core never references a service.</text>`;
   bands.forEach((band, i) => {
     const y = ys[i];
     b += `<g filter="url(#sh)"><rect x="${x0}" y="${y}" width="${x1 - x0}" height="${bh}" rx="12" fill="${C.panel}" stroke="${band.color}" stroke-width="1.5" ${band.dashed ? 'stroke-dasharray="6 4"' : ""}/><rect x="${x0}" y="${y}" width="6" height="${bh}" rx="3" fill="${band.color}"/></g>
@@ -590,6 +590,53 @@ D["storage-profiles"] = () => {
 
   b += `<text x="30" y="404" fill="${C.muted}" font-size="12.5">Default dev is disposable and fast; production keeps PDS data durable and adds the DuckDB read model for aggregate queries.</text>`;
   return frame(w, h, b, "dev vs production");
+};
+
+// 20. OAuth login flow (sequence): discover, push, consent, exchange, use.
+D["oauth-flow"] = () =>
+  sequence(900, "OAuth — a real client logs in and writes",
+    [
+      { name: "Client", color: C.appview, icon: "🔌" },
+      { name: "PDS (AS + RS)", color: C.pds, icon: "🏠" },
+      { name: "You (browser)", color: C.browser, icon: "🧑" },
+    ],
+    [
+      { from: 0, to: 0, note: true, label: "resolve handle → DID → DID doc → PDS endpoint" },
+      { from: 0, to: 1, label: "GET protected-resource + authorization-server metadata" },
+      { from: 1, to: 0, label: "issuer · endpoints · PAR · S256 · ES256", color: C.pds },
+      { from: 0, to: 0, note: true, label: "verify issuer == PDS origin" },
+      { from: 0, to: 1, label: "POST /oauth/par (params + PKCE + DPoP)" },
+      { from: 1, to: 0, label: "request_uri + DPoP-Nonce", color: C.pds },
+      { from: 0, to: 2, label: "browser → /oauth/authorize?client_id & request_uri", color: C.browser },
+      { from: 2, to: 1, label: "log in (password) + consent", color: C.browser },
+      { from: 1, to: 2, label: "302 redirect_uri?code & state & iss", color: C.pds },
+      { from: 0, to: 1, label: "POST /oauth/token (code + verifier + DPoP)" },
+      { from: 1, to: 0, label: "access + refresh · sub=DID · scope", color: C.pds },
+      { from: 0, to: 1, label: "XRPC write + access token + DPoP proof" },
+      { from: 1, to: 0, label: "200 · DPoP-Nonce (or 400 use_dpop_nonce)", color: C.pds },
+    ]);
+
+// 21. OAuth trust chain: why the client believes this AS is really yours.
+D["oauth-trust-chain"] = () => {
+  const w = 980, h = 268;
+  let b = `<text x="30" y="58" fill="${C.text}" font-size="21" font-weight="700">The trust chain</text>
+  <text x="31" y="80" fill="${C.muted}" font-size="13">Identity flows from your DID, so the client can prove this authorization server is yours — no registry.</text>`;
+  const steps = [
+    { icon: "🧑", t: "handle", s: "you.example", c: C.you },
+    { icon: "🪪", t: "DID", s: "did:plc:…", c: C.you },
+    { icon: "📄", t: "DID document", s: "#atproto_pds endpoint", c: C.you },
+    { icon: "🏠", t: "PDS (RS meta)", s: "authorization_servers", c: C.pds },
+    { icon: "🔐", t: "AS metadata", s: "issuer == PDS origin", c: C.pds },
+  ];
+  const y = 120, bw = 172, bh = 66;
+  const gap = (w - 48 - bw * steps.length) / (steps.length - 1);
+  steps.forEach((st, i) => {
+    const x = 24 + i * (bw + gap);
+    b += card(x, y, bw, bh, { color: st.c, icon: st.icon, title: st.t, sub: st.s });
+    if (i < steps.length - 1) b += arrow(x + bw, y + bh / 2, x + bw + gap, y + bh / 2, { color: steps[i + 1].c });
+  });
+  b += `<text x="30" y="${y + bh + 44}" fill="${C.muted}" font-size="12.5">The chain closes on itself: handle → DID → PDS → AS issuer, so a login can only succeed against the server your identity points at.</text>`;
+  return frame(w, h, b, "DID-anchored trust");
 };
 
 // ---- emit ----------------------------------------------------------------------------

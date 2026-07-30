@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="268" viewBox="0 0 980 268" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <marker id="a-line" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2a2f4a"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#9aa0bd"/></marker><marker id="a-you" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e0b341"/></marker><marker id="a-pds" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4ec97a"/></marker><marker id="a-relay" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c678dd"/></marker><marker id="a-appview" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7aa2ff"/></marker><marker id="a-browser" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#56b6c2"/></marker>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect x="0.75" y="0.75" width="978.5" height="266.5" rx="16" fill="#0f1220" stroke="#2a2f4a" stroke-width="1.5"/>
+  <text x="26" y="34" fill="#9aa0bd" font-size="12.5" letter-spacing="0.09em" font-weight="600">DID-ANCHORED TRUST</text>
+  <text x="30" y="58" fill="#e7e9f3" font-size="21" font-weight="700">The trust chain</text>
+  <text x="31" y="80" fill="#9aa0bd" font-size="13">Identity flows from your DID, so the client can prove this authorization server is yours — no registry.</text><g filter="url(#sh)">
+    <rect x="24" y="120" width="172" height="66" rx="12" fill="#171a2b" stroke="#e0b341" stroke-width="1.5"/>
+    <rect x="24" y="120" width="6" height="66" rx="3" fill="#e0b341"/>
+  </g>
+  <text x="51" y="154" font-size="24" text-anchor="middle" dominant-baseline="central">🧑</text>
+  <text x="70" y="148" fill="#e7e9f3" font-size="15" font-weight="650">handle</text>
+  <text x="70" y="166" fill="#9aa0bd" font-size="12"><tspan x="70" dy="0">you.example</tspan></text><path d="M196 153 L214 153" fill="none" stroke="#e0b341" stroke-width="2"  marker-end="url(#a-you)"/><g filter="url(#sh)">
+    <rect x="214" y="120" width="172" height="66" rx="12" fill="#171a2b" stroke="#e0b341" stroke-width="1.5"/>
+    <rect x="214" y="120" width="6" height="66" rx="3" fill="#e0b341"/>
+  </g>
+  <text x="241" y="154" font-size="24" text-anchor="middle" dominant-baseline="central">🪪</text>
+  <text x="260" y="148" fill="#e7e9f3" font-size="15" font-weight="650">DID</text>
+  <text x="260" y="166" fill="#9aa0bd" font-size="12"><tspan x="260" dy="0">did:plc:…</tspan></text><path d="M386 153 L404 153" fill="none" stroke="#e0b341" stroke-width="2"  marker-end="url(#a-you)"/><g filter="url(#sh)">
+    <rect x="404" y="120" width="172" height="66" rx="12" fill="#171a2b" stroke="#e0b341" stroke-width="1.5"/>
+    <rect x="404" y="120" width="6" height="66" rx="3" fill="#e0b341"/>
+  </g>
+  <text x="431" y="154" font-size="24" text-anchor="middle" dominant-baseline="central">📄</text>
+  <text x="450" y="148" fill="#e7e9f3" font-size="15" font-weight="650">DID document</text>
+  <text x="450" y="166" fill="#9aa0bd" font-size="12"><tspan x="450" dy="0">#atproto_pds</tspan><tspan x="450" dy="15">endpoint</tspan></text><path d="M576 153 L594 153" fill="none" stroke="#4ec97a" stroke-width="2"  marker-end="url(#a-pds)"/><g filter="url(#sh)">
+    <rect x="594" y="120" width="172" height="66" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/>
+    <rect x="594" y="120" width="6" height="66" rx="3" fill="#4ec97a"/>
+  </g>
+  <text x="621" y="154" font-size="24" text-anchor="middle" dominant-baseline="central">🏠</text>
+  <text x="640" y="148" fill="#e7e9f3" font-size="15" font-weight="650">PDS (RS meta)</text>
+  <text x="640" y="166" fill="#9aa0bd" font-size="12"><tspan x="640" dy="0">authorization_servers</tspan></text><path d="M766 153 L784 153" fill="none" stroke="#4ec97a" stroke-width="2"  marker-end="url(#a-pds)"/><g filter="url(#sh)">
+    <rect x="784" y="120" width="172" height="66" rx="12" fill="#171a2b" stroke="#4ec97a" stroke-width="1.5"/>
+    <rect x="784" y="120" width="6" height="66" rx="3" fill="#4ec97a"/>
+  </g>
+  <text x="811" y="154" font-size="24" text-anchor="middle" dominant-baseline="central">🔐</text>
+  <text x="830" y="148" fill="#e7e9f3" font-size="15" font-weight="650">AS metadata</text>
+  <text x="830" y="166" fill="#9aa0bd" font-size="12"><tspan x="830" dy="0">issuer == PDS</tspan><tspan x="830" dy="15">origin</tspan></text><text x="30" y="230" fill="#9aa0bd" font-size="12.5">The chain closes on itself: handle → DID → PDS → AS issuer, so a login can only succeed against the server your identity points at.</text>
+</svg>

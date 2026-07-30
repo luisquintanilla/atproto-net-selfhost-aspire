@@ -129,6 +129,7 @@ Start here:
 8. [Extending](docs/extending.md), build on the stack: reuse a library, add a lexicon, build a projection, swap storage, compose a topology.
 9. [Storage profiles](docs/storage.md), the durable production profile (SQLite PDS) vs the in-memory default.
 10. [Analytics view](docs/analytics.md), the DuckDB OLAP projection production adds over the same firehose.
+11. [OAuth authorization server](docs/oauth.md), how a real third-party client logs in and writes with PAR, PKCE, and DPoP.
 
 The dense implementation log is [docs/plan.md](docs/plan.md). To build or change the stack, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -162,9 +163,10 @@ The build is phased. Each milestone is independently demoable.
 - **M4** - self-hosted Relay with upstream crawl, global sequence, and aggregated firehose, done.
 - **M5** - Aspire orchestration plus native hosting integrations, done.
 - **Live SignalR UI** - board updates from server-driven projection deltas, done.
-- **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and nine extractable preview NuGet packages, done.
-- **M6 stretch** - mostly landed: federation discovery (each PDS advertises a `place.selfhost.instance` record and `requestCrawl`s the relay; the AppView `/directory` aggregates two PDS instances one relay crawls), `did:plc` creation, blob upload/fetch, stricter Relay MST verification, lexicon-to-C# codegen, and multi-targeting the core libraries (`net9.0;net10.0`). Remaining: a full OAuth authorization server and publishing the libraries to nuget.org once the API surface settles.
+- **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and ten extractable preview NuGet packages, done.
+- **M6 stretch** - mostly landed: federation discovery (each PDS advertises a `place.selfhost.instance` record and `requestCrawl`s the relay; the AppView `/directory` aggregates two PDS instances one relay crawls), `did:plc` creation, blob upload/fetch, stricter Relay MST verification, lexicon-to-C# codegen, and multi-targeting the core libraries (`net9.0;net10.0`). Remaining: publishing the libraries to nuget.org once the API surface settles.
 - **Production profile** - a durable, opt-in "real-world" stack: SQLite-backed PDS (accounts, repositories, and blobs survive a restart) plus a [DuckDB analytics AppView](docs/analytics.md) over the same firehose, both behind `ATPROTO_PROFILE=production`; in-memory stays the zero-config default. The preview libraries publish to [GitHub Packages](docs/packaging.md) on a version tag. Done.
+- **OAuth authorization server** - the atproto OAuth 2.1 profile end to end: PAR, PKCE (S256), DPoP with server-issued rolling nonces, URL-based `client_id` metadata documents, and DID-anchored discovery, for both public and confidential (`private_key_jwt`) clients. Additive to the existing app-password path, and the reusable primitives ship in the packable [`AtProto.OAuth`](docs/oauth.md) library. Done.
 
 ## License
 

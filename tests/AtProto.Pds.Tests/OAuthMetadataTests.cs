@@ -41,6 +41,17 @@ public sealed class OAuthMetadataTests : IClassFixture<PdsServerFixture>
         Assert.Equal("S256", doc.GetProperty("code_challenge_methods_supported")[0].GetString());
         Assert.Equal("ES256", doc.GetProperty("dpop_signing_alg_values_supported")[0].GetString());
         Assert.Contains("atproto", doc.GetProperty("scopes_supported").EnumerateArray().Select(e => e.GetString()));
+        Assert.Contains("transition:generic", doc.GetProperty("scopes_supported").EnumerateArray().Select(e => e.GetString()));
+
+        Assert.Contains("code", doc.GetProperty("response_types_supported").EnumerateArray().Select(e => e.GetString()));
+        Assert.Contains("authorization_code", doc.GetProperty("grant_types_supported").EnumerateArray().Select(e => e.GetString()));
+        Assert.Contains("refresh_token", doc.GetProperty("grant_types_supported").EnumerateArray().Select(e => e.GetString()));
+
+        // Both the public and confidential client authentication methods are advertised (ES256 assertions).
+        var authMethods = doc.GetProperty("token_endpoint_auth_methods_supported").EnumerateArray().Select(e => e.GetString()).ToArray();
+        Assert.Contains("none", authMethods);
+        Assert.Contains("private_key_jwt", authMethods);
+        Assert.Contains("ES256", doc.GetProperty("token_endpoint_auth_signing_alg_values_supported").EnumerateArray().Select(e => e.GetString()));
     }
 
     [Fact]

@@ -31,6 +31,7 @@ cut across all of them.*
 | Persist data or swap storage | [F](#path-f---persist-or-swap-storage) | a store interface |
 | Run my own multi-service topology | [G](#path-g---compose-your-own-topology-with-aspire) | the AppHost |
 | Change how identity works | [H](#path-h---choose-your-identity-method) | `AtProto.Identity` |
+| Log in a real third-party client and write to a repo | [I](#path-i---bring-your-own-oauth-client) | a `client-metadata.json` + `AtProto.OAuth` |
 
 Each path below lists **when to use it**, **the steps**, a **minimal shape**, **code pointers**, and
 **how to verify**.
@@ -40,10 +41,10 @@ Each path below lists **when to use it**, **the steps**, a **minimal shape**, **
 **When:** you want just one capability (content-addressed blocks, CAR read/write, a firehose client,
 MST build/read) inside your own project, without adopting the whole stack.
 
-Nine libraries are layered so the core never depends on a service, which is what makes them
+Ten libraries are layered so the core never depends on a service, which is what makes them
 extractable. See [packaging](packaging.md) for the full layer map and the preview-feed setup.
 
-![the nine extractable libraries, layered](img/packaging.svg)
+![the ten extractable libraries, layered](img/packaging.svg)
 
 **Steps:**
 
@@ -341,18 +342,77 @@ resolves both methods, and the offline `did:plc` creation path is implemented.
 **Verify:** `AtProto.Core.Tests` derives a `did:plc` that matches a real Bluesky vector; a resolved DID
 document exposes the expected service endpoint.
 
+## Path I - Bring your own OAuth client
+
+**When:** you want a real third-party app (a browser app, a native app, or a "Login with atproto"
+service) to sign in as an account on this PDS and make authorized writes, instead of the built-in
+app-password path. This is the interop path: it is what lets a client you did not write talk to your
+server.
+
+The PDS is a conformant atproto OAuth authorization server. There is **no client registration step and
+no client secret**. Your `client_id` *is* an HTTPS URL that serves a public `client-metadata.json`
+document; the server fetches and validates it (SSRF-hardened) on every request. Read
+[the OAuth doc](oauth.md) for the trust chain, the flow, and the threat model first.
+
+**Steps:**
+
+1. **Publish a `client-metadata.json`** at a stable HTTPS URL. That URL is your `client_id`. List your
+   `redirect_uris`, the `atproto` scope (plus `transition:generic` for write access), and mark the
+   client as DPoP-bound.
+2. **Choose a client type.** A *public* client uses `token_endpoint_auth_method: "none"` and needs no
+   keys (good for browser and native apps). A *confidential* client adds `private_key_jwt`: publish an
+   EC P-256 key set via `jwks` (inline) or `jwks_uri`, and sign a client assertion at the PAR and token
+   endpoints. Confidential sessions get a longer lifetime. The assertion key must differ from the DPoP
+   key.
+3. **Point the client at the account's PDS.** It resolves the handle to a DID, reads the DID document
+   for the `#atproto_pds` endpoint, then follows `oauth-protected-resource` to
+   `oauth-authorization-server` and checks the `issuer`. No registry is involved.
+4. **Run the flow:** POST to `/oauth/par` (with a DPoP proof), redirect the browser to
+   `/oauth/authorize` (the user logs in with the account password and consents), exchange the returned
+   `code` at `/oauth/token` (PKCE `S256` + DPoP), then send XRPC writes with the DPoP-bound access token
+   and a fresh proof per request.
+5. **Local development shortcut:** use a `http://localhost` client. The server synthesizes a virtual
+   client metadata document, so you do not have to host anything to test the flow end to end.
+
+**Minimal shape** (a public client metadata document):
+
+```json
+{
+  "client_id": "https://app.example.com/client-metadata.json",
+  "client_name": "Example status app",
+  "client_uri": "https://app.example.com",
+  "redirect_uris": ["https://app.example.com/callback"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "scope": "atproto transition:generic",
+  "token_endpoint_auth_method": "none",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true
+}
+```
+
+A confidential client changes `token_endpoint_auth_method` to `"private_key_jwt"`, adds
+`"token_endpoint_auth_signing_alg": "ES256"`, and adds a `"jwks"` (or `"jwks_uri"`) with an EC P-256
+signing key.
+
+**Code pointers:** the reusable protocol primitives (DPoP proofs and rolling nonces, PKCE, JWK and
+`jkt` thumbprints, client-metadata fetch, client assertions, access-token issue and validate) live in
+the packable `AtProto.OAuth` library, so you can also build the *client* side in .NET. The server
+endpoints (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`,
+`/oauth/par`, `/oauth/authorize`, `/oauth/token`) and the resource-server enforcement live in
+`src/services/AtProto.Pds/PdsHost.cs`. OAuth state follows the storage seam (`IOAuthStore`, in-memory by
+default, SQLite under the production profile), mirroring [Path F](#path-f---persist-or-swap-storage).
+
+**Verify:** the in-process integration tests drive the whole flow plus a negative matrix (replay, wrong
+key, PKCE mismatch, reused code, reused refresh, SSRF-blocked metadata, missing-nonce retry, confidential
+assertion misuse). For real end-to-end proof, point a reference client at the AS over HTTPS: the pure
+.NET `CarpaNet.OAuth` client (primary) or the official TypeScript `@atproto/oauth-client-node`
+(cross-check). The exact procedure is in [the OAuth interop guide](oauth-interop.md).
+
 ## What's left (and the path for each)
 
 The stack is complete through the M6 stretch except for a few items. This is the honest list, each with
 its path, so you know what you are adopting.
-
-### OAuth 2.1 authorization server (deferred)
-
-Sessions use a dev HMAC JWT today (`Pds__JwtSecret`), not the atproto OAuth profile. A real
-authorization server (PAR, DPoP, `client_id` metadata documents) is the largest remaining piece and is
-hard to self-verify without a real browser and client. **Path:** add an AS surface to the PDS, issue
-DPoP-bound tokens, publish client metadata, and gate the write endpoints on it. Until then, treat auth
-as demo-grade.
 
 ### Durable storage (production profile built; in-memory is the default)
 
@@ -366,7 +426,7 @@ persist another store:** the seam from [Path F](#path-f---persist-or-swap-storag
 
 ### Publishing to nuget.org (deferred)
 
-The nine libraries build, pack, and carry metadata, but ship as a **preview line** (`0.1.0`) that is
+The ten libraries build, pack, and carry metadata, but ship as a **preview line** (`0.1.0`) that is
 not pushed to nuget.org while the public API settles. **Path:** drop the preview framing in
 `Directory.Build.props` and add a push step to the `pack` CI job. See
 [packaging](packaging.md#versioning-intent).

@@ -8,18 +8,19 @@ produced.
 
 ## The extractable libraries
 
-Nine projects are marked packable. The other projects (the services, the two console apps, the AppHost,
+Ten projects are marked packable. The other projects (the services, the two console apps, the AppHost,
 and the tests) are deliberately **not** packaged. They are the hero app that consumes the libraries.
 
 ![extractable libraries layered so the core never depends on a service](img/packaging.svg)
 
-*Figure: Nine preview packages in layers. Each layer depends only on the ones below it, and the hero app on top is never packaged.*
+*Figure: Ten preview packages in layers. Each layer depends only on the ones below it, and the hero app on top is never packaged.*
 
 | Package | Layer | What it gives you |
 | --- | --- | --- |
 | `AtProto.Cid` | Primitives | Content identifiers (CIDv1, dag-cbor, sha-256). |
 | `AtProto.Crypto` | Primitives | secp256k1 (k256) and NIST P-256 signing. |
 | `AtProto.Lexicon` | Primitives | Lexicon, NSID, and AT-URI value types. |
+| `AtProto.OAuth` | Primitives | atproto OAuth profile: DPoP proofs and rolling nonces, PKCE, EC P-256 JWK and `jkt` thumbprints, `client_id` metadata documents (SSRF-hardened), and DPoP-bound access tokens. |
 | `AtProto.Cbor` | Encodings + identity | Canonical DAG-CBOR encode/decode. |
 | `AtProto.Car` | Encodings + identity | CARv1 read/write (the repo export format). |
 | `AtProto.Identity` | Encodings + identity | DID documents, did:web resolution, and did:plc creation. |
@@ -29,7 +30,7 @@ and the tests) are deliberately **not** packaged. They are the hero app that con
 
 ## Target frameworks
 
-The eight core libraries multi-target **`net9.0` and `net10.0`**, so you can consume them from either
+The nine core libraries multi-target **`net9.0` and `net10.0`**, so you can consume them from either
 runtime; each preview package carries both `lib/net9.0` and `lib/net10.0` assemblies. The Aspire
 integration (`AtProto.Hosting.Atproto`) targets **`net10.0`** only, matching the .NET Aspire version it
 builds on.
@@ -44,6 +45,9 @@ to decode a firehose, without dragging a web host along.
 
 The dependency graph is enforced by the project references themselves, and you can see it in any
 package's `.nuspec`: the sibling `<dependency>` entries only ever point at other packable libraries.
+`AtProto.OAuth` sits at the base with no atproto dependencies at all: it implements its ES256 JOSE and
+JWK handling directly on the BCL, so you can take it on its own to build an atproto authorization server
+or client.
 
 ## How the gating works
 
@@ -63,7 +67,7 @@ Packaging is opt-in, so the hero app stays free of packaging side effects.
   the shared package README) *only* when `IsPackable` is true, so services, apps, and tests are never
   touched.
 
-To confirm the gate, run `dotnet pack` and check the output: exactly the nine libraries above produce a
+To confirm the gate, run `dotnet pack` and check the output: exactly the ten libraries above produce a
 `.nupkg` (and a `.snupkg`); nothing else does.
 
 ## Versioning intent
@@ -92,7 +96,7 @@ the same pack command and only pushes to GitHub Packages on version tags or manu
 ## Install from GitHub Packages
 
 Preview packages are published to GitHub Packages, not nuget.org yet. Maintainers cut a release by
-pushing a `vX.Y.Z` tag, which triggers the `publish` job and pushes the nine packable libraries to:
+pushing a `vX.Y.Z` tag, which triggers the `publish` job and pushes the ten packable libraries to:
 
 ```text
 https://nuget.pkg.github.com/luisquintanilla/index.json
