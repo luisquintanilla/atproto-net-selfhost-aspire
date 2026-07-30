@@ -8,4 +8,8 @@
     <Description>atproto OAuth profile primitives for .NET: DPoP proof validation and rolling nonces, PKCE, EC P-256 JWK and RFC 7638 thumbprints, URL client_id metadata documents with SSRF-hardened fetching, server metadata, and DPoP-bound access tokens. Build a conformant atproto authorization server or client. Part of the atproto-net-selfhost-aspire stack.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="AtProto.OAuth.Tests" />
+  </ItemGroup>
+
 </Project>
