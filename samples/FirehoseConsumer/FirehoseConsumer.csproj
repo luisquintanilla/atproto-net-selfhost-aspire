@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>FirehoseConsumer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      A normal package reference, exactly as an external adopter writes it. AtProto.Firehose pulls in
+      its siblings (Cid, Cbor, Car, Repo, Lexicon, and transitively Crypto and Identity) as package
+      dependencies, so this single reference is enough to decode the firehose.
+    -->
+    <PackageReference Include="AtProto.Firehose" Version="0.1.0" />
+  </ItemGroup>
+
+</Project>

@@ -130,6 +130,11 @@ dotnet nuget add source "$(pwd)/artifacts/packages" --name atproto-preview
 dotnet add package AtProto.Car --version 0.1.0 --source atproto-preview
 ```
 
+For a complete, runnable example, see the [`FirehoseConsumer` sample](../samples/FirehoseConsumer),
+a standalone console app that references `AtProto.Firehose` as a package and decodes the live Bluesky
+firehose. It restores from a local feed by default (no authentication), so it doubles as a smoke test
+that the published packages are consumable outside this repository.
+
 ## The extraction path
 
 When a library is ready to stand on its own:

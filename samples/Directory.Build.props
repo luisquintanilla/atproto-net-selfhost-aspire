@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Samples are standalone consumers of the published packages, not part of the mono-repo build.
+    This file intentionally does NOT import the repository root Directory.Build.props, so a sample
+    behaves like an external project: no Central Package Management, no shared repo metadata. That is
+    the point, a sample proves the packages are consumable the same way anyone else would consume them.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

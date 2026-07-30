@@ -141,9 +141,14 @@ src/
   apps/      AtProto.FirehoseProbe · AtProto.StatusSeeder
   aspire/    AtProto.AppHost · AtProto.ServiceDefaults · AtProto.Hosting.Atproto
 lexicons/    custom lexicon JSON for the demo status record
+samples/     standalone consumers of the published packages (FirehoseConsumer)
 tests/       core interop vectors, firehose, integration, hosting
 docs/        newcomer docs and implementation notes
 ```
+
+The [`samples/FirehoseConsumer`](samples/FirehoseConsumer) app is the smallest external consumer: one
+`AtProto.Firehose` package reference, and it decodes the live Bluesky firehose. It builds against the
+published packages (not project references), so it also proves the libraries stand on their own.
 
 ## Roadmap
 
