@@ -92,6 +92,55 @@ it with the DuckDB CLI and run ad hoc SQL:
 SELECT collection, count(*) FROM events GROUP BY collection ORDER BY 2 DESC;
 ```
 
+## Point it at the live Bluesky network
+
+The same analytics view can consume the **real public Bluesky firehose** instead of your self-hosted
+Relay. Nothing about the code changes: the firehose client, the CBOR/CAR decode path, and the DuckDB
+ingest are all protocol code, so pointing them at `relay1.us-west.bsky.network` is the strongest proof
+that this .NET stack speaks atproto correctly. It consumes the same wire format that production Bluesky
+emits, unmodified.
+
+A `bluesky` launch profile runs the view standalone against the live network, into an in-memory DuckDB:
+
+```bash
+dotnet run --project src/services/AtProto.AnalyticsView/AtProto.AnalyticsView.csproj \
+  --launch-profile bluesky
+```
+
+That profile sets two environment variables (see `Properties/launchSettings.json`):
+
+| Variable | Value | Effect |
+| --- | --- | --- |
+| `Firehose__RelayHost` | `relay1.us-west.bsky.network` | subscribe to the public Bluesky relay (canonical alternative: `bsky.network`) |
+| `Analytics__DuckDbPath` | `:memory:` | keep the whole projection in RAM, an ephemeral live tail |
+
+Then browse to `http://localhost:5300` (or query the same endpoints as above). Within a minute you are
+looking at real aggregates over live global activity, for example:
+
+```text
+Analytics ingest: source relay1.us-west.bsky.network, resume none
+total ops: 7964
+app.bsky.feed.like=5276, app.bsky.feed.post=1049, app.bsky.feed.repost=912,
+app.bsky.graph.follow=472, app.bsky.feed.threadgate=64
+```
+
+The distribution is authentic (likes dominate, then posts, reposts, and follows), the repos are real
+`did:plc:...` accounts, and the long tail includes third-party lexicons the presence board never sees.
+
+**A few things to know for the live tail:**
+
+- The firehose is high volume (roughly 250 to 800 ops per second), so `:memory:` is the right choice for
+  a throwaway demo. The projection is gone when you stop the process, which is what you want here.
+- A fresh run starts at the **live tip** (`resume none`) and streams forward. The view still checkpoints
+  a resume cursor next to the binary (`analyticsview-cursor.txt`, gitignored), so re-running continues the
+  live tail without gaps. Delete that file to force a restart from the tip.
+- This standalone mode does not need Aspire or the production profile. It is the analytics view on its
+  own, pointed at someone else's Relay, which is exactly how a real third-party AppView would consume the
+  network.
+
+The production profile (above) points this same service at your **self-hosted** Relay instead. Live
+Bluesky proves interop; the self-hosted profile proves the whole loop is yours end to end.
+
 ## Why not the Aspire DuckDB hosting resource?
 
 The service depends on `DuckDB.NET.Data.Full`, which bundles the DuckDB native library and opens the

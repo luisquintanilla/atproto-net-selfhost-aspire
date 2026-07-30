@@ -70,6 +70,17 @@ ASPIRE_ALLOW_UNSECURED_TRANSPORT=true ATPROTO_PROFILE=production \
 Nothing is removed by turning this on. In-memory stays the default and the test default. See
 [storage profiles](docs/storage.md) for the toggle, the SQLite schema, and what survives a restart.
 
+You can also point the analytics view at the **real public Bluesky firehose** to see live global
+aggregates, no self-hosting required:
+
+```bash
+dotnet run --project src/services/AtProto.AnalyticsView/AtProto.AnalyticsView.csproj \
+  --launch-profile bluesky
+```
+
+This streams the live network (`relay1.us-west.bsky.network`) into an in-memory DuckDB, the strongest
+proof this .NET stack speaks atproto correctly. See [pointing it at the live network](docs/analytics.md#point-it-at-the-live-bluesky-network).
+
 ## What you can do
 
 - Watch the live presence board update from self-hosted demo accounts.

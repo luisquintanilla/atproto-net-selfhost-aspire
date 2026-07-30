@@ -18,6 +18,17 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "bluesky": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5300",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Firehose__RelayHost": "relay1.us-west.bsky.network",
+        "Analytics__DuckDbPath": ":memory:"
+      }
     }
   }
 }
