@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using AtProto.Cbor;
 using AtProto.Firehose;
+using AtProto.OAuth;
 using AtProto.Repo;
 
 namespace AtProto.Pds;
@@ -33,11 +34,17 @@ public static class PdsHost
         RegisterOAuthStore(builder.Services, options);
         builder.Services.AddSingleton<PdsService>();
         builder.Services.AddHttpClient();
+        builder.Services.AddCors(cors => cors.AddPolicy(OAuthCorsPolicy, policy => policy
+            .AllowAnyOrigin()
+            .WithMethods("GET", "POST", "OPTIONS")
+            .WithHeaders("Authorization", "DPoP", "Content-Type")
+            .WithExposedHeaders("DPoP-Nonce", "WWW-Authenticate")));
         builder.Services.AddHostedService<PdsInstanceAdvertiser>();
 
         WebApplication app = builder.Build();
         RehydrateFromStorage(app.Services);
         app.UseWebSockets();
+        app.UseCors();
         app.MapDefaultEndpoints();
         MapErrorHandling(app);
         MapServer(app);
@@ -45,8 +52,12 @@ public static class PdsHost
         MapBlob(app);
         MapSync(app);
         MapIdentity(app);
+        MapOAuthMetadata(app);
         return app;
     }
+
+    /// <summary>The CORS policy applied to the OAuth surface so browser apps can call it cross-origin.</summary>
+    internal const string OAuthCorsPolicy = "oauth";
 
     /// <summary>Register the storage seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
     private static void RegisterPersistence(IServiceCollection services, PdsOptions options)
@@ -114,6 +125,22 @@ public static class PdsHost
                 await context.Response.WriteAsJsonAsync(new { error = ex.Error, message = ex.Message });
             }
         });
+
+    /// <summary>The atproto OAuth discovery documents: protected-resource and authorization-server metadata.</summary>
+    private static void MapOAuthMetadata(WebApplication app)
+    {
+        app.MapGet("/.well-known/oauth-protected-resource", (PdsService pds) =>
+            Results.Content(
+                ProtectedResourceMetadata.ForIssuer(pds.Identity.PublicUrl, AuthorizationServerMetadata.DefaultScopes).ToJson(),
+                "application/json"))
+            .RequireCors(OAuthCorsPolicy);
+
+        app.MapGet("/.well-known/oauth-authorization-server", (PdsService pds) =>
+            Results.Content(
+                AuthorizationServerMetadata.ForIssuer(pds.Identity.PublicUrl).ToJson(),
+                "application/json"))
+            .RequireCors(OAuthCorsPolicy);
+    }
 
     private static void MapServer(WebApplication app)
     {
