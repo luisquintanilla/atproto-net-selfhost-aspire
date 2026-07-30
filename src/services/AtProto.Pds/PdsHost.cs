@@ -64,6 +64,7 @@ public static class PdsHost
         MapOAuthMetadata(app);
         MapOAuthPar(app);
         MapOAuthAuthorize(app);
+        MapOAuthToken(app);
         return app;
     }
 
@@ -78,6 +79,12 @@ public static class PdsHost
 
     /// <summary>The double-submit CSRF cookie for the authorization interface forms.</summary>
     private const string OAuthCsrfCookie = "oauth_csrf";
+
+    /// <summary>The lifetime of an issued DPoP-bound access token, in seconds.</summary>
+    private const int AccessTokenTtlSeconds = 900;
+
+    /// <summary>The maximum lifetime of a public-client OAuth session (spec cap: two weeks).</summary>
+    private static readonly TimeSpan PublicSessionLifetime = TimeSpan.FromDays(14);
 
     /// <summary>Register the storage seam: in-memory by default, SQLite when <c>Pds:Storage=sqlite</c>.</summary>
     private static void RegisterPersistence(IServiceCollection services, PdsOptions options)
@@ -499,6 +506,197 @@ public static class PdsHost
             </html>
             """;
         return Results.Content(html, "text/html; charset=utf-8", null, StatusCodes.Status400BadRequest);
+    }
+
+    /// <summary>
+    /// The token endpoint (atproto profile). Handles the <c>authorization_code</c> exchange and
+    /// <c>refresh_token</c> rotation over a DPoP-proofed request, issuing DPoP-bound access tokens and
+    /// single-use refresh tokens. The access token carries <c>sub</c> (the account DID), <c>scope</c>,
+    /// and the <c>cnf.jkt</c> binding; reusing a consumed code or refresh token revokes the session.
+    /// </summary>
+    private static void MapOAuthToken(WebApplication app) =>
+        app.MapPost("/oauth/token", async (
+            HttpContext context,
+            PdsService pds,
+            IOAuthStore store,
+            DpopNonceService nonces) =>
+        {
+            if (!context.Request.HasFormContentType)
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
+                    "request must be application/x-www-form-urlencoded");
+
+            IFormCollection form = await context.Request.ReadFormAsync(context.RequestAborted);
+
+            IResult? dpopError = EnforceDpop(context, store, nonces, OAuthEndpointUrl(pds, "/oauth/token"), out DpopProof proof);
+            if (dpopError is not null)
+                return dpopError;
+
+            string issuer = pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority);
+            return form["grant_type"].ToString() switch
+            {
+                "authorization_code" => IssueFromCode(context, pds, store, nonces, form, proof, issuer),
+                "refresh_token" => IssueFromRefresh(context, pds, store, nonces, form, proof, issuer),
+                _ => OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.UnsupportedGrantType,
+                    "unsupported grant_type"),
+            };
+        }).RequireCors(OAuthCorsPolicy);
+
+    /// <summary>
+    /// Run the shared DPoP gate for a token-style endpoint: validate the proof against the endpoint,
+    /// answer a missing nonce with a challenge, and reject a replayed proof. Returns a non-null error
+    /// result to short-circuit, or null with <paramref name="proof"/> set on success.
+    /// </summary>
+    private static IResult? EnforceDpop(HttpContext context, IOAuthStore store, DpopNonceService nonces, string htu, out DpopProof proof)
+    {
+        proof = null!;
+        DpopValidationResult result = DpopValidator.Validate(
+            context.Request.Headers["DPoP"].ToString(),
+            new DpopValidationOptions { ExpectedHtm = "POST", ExpectedHtu = htu },
+            nonces);
+        if (result.Status == DpopValidationStatus.NonceRequired)
+        {
+            context.Response.Headers["DPoP-Nonce"] = nonces.Current();
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.UseDpopNonce,
+                "authorization server requires a DPoP nonce");
+        }
+        if (!result.IsValid)
+        {
+            context.Response.Headers["DPoP-Nonce"] = nonces.Current();
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidDpopProof, result.Error);
+        }
+        proof = result.Proof!;
+        if (!store.TryRegisterJti(proof.Jti, DateTimeOffset.UtcNow.AddMinutes(10)))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidDpopProof,
+                "DPoP proof has already been used");
+        return null;
+    }
+
+    private static IResult IssueFromCode(HttpContext context, PdsService pds, IOAuthStore store, DpopNonceService nonces, IFormCollection form, DpopProof proof, string issuer)
+    {
+        string? code = NullIfEmpty(form["code"].ToString());
+        string? redirectUri = NullIfEmpty(form["redirect_uri"].ToString());
+        string? clientId = NullIfEmpty(form["client_id"].ToString());
+        string? codeVerifier = NullIfEmpty(form["code_verifier"].ToString());
+        if (code is null || redirectUri is null || clientId is null || codeVerifier is null)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
+                "code, redirect_uri, client_id, and code_verifier are required");
+
+        AuthorizationCode? authCode = store.GetAuthorizationCode(code);
+        if (authCode is null)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "authorization code is invalid");
+
+        // Reuse of a consumed code is an attack: revoke the session it minted.
+        if (authCode.Consumed)
+        {
+            if (authCode.SessionId is not null)
+                store.RevokeSession(authCode.SessionId);
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant,
+                "authorization code has already been used");
+        }
+        if (authCode.ExpiresAt <= DateTimeOffset.UtcNow)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "authorization code has expired");
+        if (!string.Equals(authCode.ClientId, clientId, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "client_id does not match the authorization code");
+        if (!string.Equals(authCode.RedirectUri, redirectUri, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "redirect_uri does not match the authorization request");
+        if (!string.Equals(authCode.DpopJkt, proof.Jkt, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "DPoP key does not match the authorization request");
+        if (!Pkce.Verify(codeVerifier, authCode.CodeChallenge))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "PKCE verification failed");
+
+        string sessionId = OAuthIds.NewSessionId();
+        if (!store.TryConsumeAuthorizationCode(code, sessionId))
+        {
+            // Lost a concurrent race: the other exchange owns the session, so treat this as reuse.
+            AuthorizationCode? latest = store.GetAuthorizationCode(code);
+            if (latest?.SessionId is not null)
+                store.RevokeSession(latest.SessionId);
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant,
+                "authorization code has already been used");
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset sessionExpiry = now.Add(PublicSessionLifetime);
+        store.SaveSession(new OAuthSession(sessionId, authCode.ClientId, authCode.Did, authCode.Scope, authCode.DpopJkt, now, sessionExpiry));
+
+        string accessToken = IssueAccessToken(pds, authCode.Did, authCode.Scope, authCode.DpopJkt, issuer, now);
+        string refreshToken = OAuthIds.NewRefreshToken();
+        store.SaveRefreshToken(new RefreshTokenEntry(refreshToken, sessionId, sessionExpiry));
+
+        return TokenResponse(context, nonces, accessToken, refreshToken, authCode.Scope, authCode.Did);
+    }
+
+    private static IResult IssueFromRefresh(HttpContext context, PdsService pds, IOAuthStore store, DpopNonceService nonces, IFormCollection form, DpopProof proof, string issuer)
+    {
+        string? refreshToken = NullIfEmpty(form["refresh_token"].ToString());
+        string? clientId = NullIfEmpty(form["client_id"].ToString());
+        if (refreshToken is null || clientId is null)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidRequest,
+                "refresh_token and client_id are required");
+
+        RefreshTokenEntry? entry = store.GetRefreshToken(refreshToken);
+        if (entry is null)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "refresh token is invalid");
+
+        // Reuse of a rotated refresh token is an attack: revoke the whole session.
+        if (entry.Consumed)
+        {
+            store.RevokeSession(entry.SessionId);
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant,
+                "refresh token has already been used");
+        }
+        if (entry.ExpiresAt <= DateTimeOffset.UtcNow)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "refresh token has expired");
+
+        OAuthSession? session = store.GetSession(entry.SessionId);
+        if (session is null || session.ExpiresAt <= DateTimeOffset.UtcNow)
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "session has expired");
+        if (!string.Equals(session.ClientId, clientId, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "client_id does not match the session");
+        if (!string.Equals(session.DpopJkt, proof.Jkt, StringComparison.Ordinal))
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant, "DPoP key does not match the session");
+
+        if (!store.TryConsumeRefreshToken(refreshToken))
+        {
+            store.RevokeSession(entry.SessionId);
+            return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidGrant,
+                "refresh token has already been used");
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        string newRefresh = OAuthIds.NewRefreshToken();
+        store.SaveRefreshToken(new RefreshTokenEntry(newRefresh, session.SessionId, session.ExpiresAt));
+        string accessToken = IssueAccessToken(pds, session.Did, session.Scope, session.DpopJkt, issuer, now);
+
+        return TokenResponse(context, nonces, accessToken, newRefresh, session.Scope, session.Did);
+    }
+
+    private static string IssueAccessToken(PdsService pds, string did, string scope, string jkt, string issuer, DateTimeOffset now) =>
+        AccessToken.Issue(new AccessTokenClaims
+        {
+            Subject = did,
+            Scope = scope,
+            Issuer = issuer,
+            ConfirmationJkt = jkt,
+            IssuedAt = now.ToUnixTimeSeconds(),
+            ExpiresAt = now.AddSeconds(AccessTokenTtlSeconds).ToUnixTimeSeconds(),
+            TokenId = Guid.NewGuid().ToString("N"),
+        }, pds.Identity.JwtSecret);
+
+    private static IResult TokenResponse(HttpContext context, DpopNonceService nonces, string accessToken, string refreshToken, string scope, string did)
+    {
+        context.Response.Headers["DPoP-Nonce"] = nonces.Current();
+        context.Response.Headers.CacheControl = "no-store";
+        string body = JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["access_token"] = accessToken,
+            ["token_type"] = "DPoP",
+            ["expires_in"] = AccessTokenTtlSeconds,
+            ["refresh_token"] = refreshToken,
+            ["scope"] = scope,
+            ["sub"] = did,
+        });
+        return Results.Content(body, "application/json", null, StatusCodes.Status200OK);
     }
 
     private static void MapServer(WebApplication app)
