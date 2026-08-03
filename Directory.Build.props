@@ -29,6 +29,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>atproto;at-protocol;bluesky;decentralized;fediverse;dotnet</PackageTags>
     <!-- Preview line: the API surface is still settling, so these are not published to nuget.org yet. -->
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
   </PropertyGroup>
 </Project>

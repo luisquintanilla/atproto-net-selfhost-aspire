@@ -72,8 +72,9 @@ To confirm the gate, run `dotnet pack` and check the output: exactly the ten lib
 
 ## Versioning intent
 
-The libraries ship as a **preview line** (`0.1.0`) and are **not published to nuget.org yet**. The
-public API is still moving as the services grow (OAuth, richer identity and lexicons), and we do not
+The libraries ship as a **preview line** (`0.2.0`) and are **not published to nuget.org yet**. The
+public API is still moving as the services grow (richer identity, lexicons, and granular OAuth scopes),
+and we do not
 want to freeze names and signatures before they have settled. Preview artifacts let you try the
 libraries and pin exact versions without implying a stability promise we cannot keep yet.
 
@@ -121,7 +122,7 @@ dotnet nuget add source https://nuget.pkg.github.com/luisquintanilla/index.json 
 Then install a package as usual:
 
 ```bash
-dotnet add package AtProto.Repo --version 0.1.0
+dotnet add package AtProto.Repo --version 0.2.0
 ```
 
 ### Trying a preview package from another project
@@ -131,7 +132,7 @@ Point a local NuGet feed at the packed output:
 ```bash
 dotnet nuget add source "$(pwd)/artifacts/packages" --name atproto-preview
 # then, in your project
-dotnet add package AtProto.Car --version 0.1.0 --source atproto-preview
+dotnet add package AtProto.Car --version 0.2.0 --source atproto-preview
 ```
 
 For a complete, runnable example, see the [`FirehoseConsumer` sample](../samples/FirehoseConsumer),

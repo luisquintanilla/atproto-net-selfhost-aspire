@@ -58,7 +58,7 @@ extractable. See [packaging](packaging.md) for the full layer map and the previe
 2. Reference the one package you need:
 
    ```bash
-   dotnet add package AtProto.Car --version 0.1.0 --source atproto-preview
+   dotnet add package AtProto.Car --version 0.2.0 --source atproto-preview
    ```
 
 **Minimal shape** (read a repo export, then decode a live firehose):
@@ -426,7 +426,7 @@ persist another store:** the seam from [Path F](#path-f---persist-or-swap-storag
 
 ### Publishing to nuget.org (deferred)
 
-The ten libraries build, pack, and carry metadata, but ship as a **preview line** (`0.1.0`) that is
+The ten libraries build, pack, and carry metadata, but ship as a **preview line** (`0.2.0`) that is
 not pushed to nuget.org while the public API settles. **Path:** drop the preview framing in
 `Directory.Build.props` and add a push step to the `pack` CI job. See
 [packaging](packaging.md#versioning-intent).
