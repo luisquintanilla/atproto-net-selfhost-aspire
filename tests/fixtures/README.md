@@ -31,4 +31,5 @@ dotnet run --project tools/AtProto.Fixtures.Tool -- --out tests/fixtures --handl
 Firehose frames are live samples and differ each run (structure is stable, content is not).
 The CAR/JSON vectors are stable snapshots of the source repo at capture time.
 
-Integrity is asserted by `tests/AtProto.Fixtures.Tests`.
+Integrity is asserted by the shared repository's
+[`AtProto.Fixtures.Tests`](https://github.com/luisquintanilla/atproto-dotnet/tree/main/tests/AtProto.Fixtures.Tests).

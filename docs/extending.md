@@ -48,7 +48,7 @@ extractable. See [packaging](packaging.md) for the full layer map and the previe
 
 **Steps:**
 
-1. Add the GitHub Packages feed (from [packaging](packaging.md#install-from-github-packages)):
+1. Add the GitHub Packages feed (from [packaging](packaging.md#consuming-the-shared-packages)):
 
    ```bash
    dotnet nuget add source https://nuget.pkg.github.com/luisquintanilla/index.json \

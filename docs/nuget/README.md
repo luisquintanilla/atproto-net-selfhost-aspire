@@ -24,7 +24,7 @@ repository:
 | `AtProto.Lexicon.SourceGeneration` | Roslyn Lexicon source generator |
 
 The shared packages are distributed through GitHub Packages. See the
-self-hosting repository's [packaging guide](../../docs/packaging.md) for
-authentication and exact-version installation instructions.
+[packaging guide](https://github.com/luisquintanilla/atproto-net-selfhost-aspire/blob/main/docs/packaging.md)
+for authentication and exact-version installation instructions.
 
 Licensed under the MIT License.
