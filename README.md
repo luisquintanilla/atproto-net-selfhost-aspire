@@ -125,7 +125,7 @@ Start here:
 4. [Reactive design](docs/reactive-design.md), pull ingest, `IObservable` seam, Rx projection, SignalR push.
 5. [Services](docs/services.md), endpoint and config reference.
 6. [Scenarios](docs/scenarios.md), why this exists and where it fits.
-7. [Packaging](docs/packaging.md), the extractable libraries and how preview packages are built.
+7. [Packaging](docs/packaging.md), the shared packages and the local Aspire integration package.
 8. [Extending](docs/extending.md), build on the stack: reuse a library, add a lexicon, build a projection, swap storage, compose a topology.
 9. [Storage profiles](docs/storage.md), the durable production profile (SQLite PDS) vs the in-memory default.
 10. [Analytics view](docs/analytics.md), the DuckDB OLAP projection production adds over the same firehose.
@@ -137,19 +137,19 @@ The dense implementation log is [docs/plan.md](docs/plan.md). To build or change
 
 ```text
 src/
-  core/      AtProto.Cbor · Cid · Car · Crypto · Repo · Identity · Lexicon · Firehose
   services/  AtProto.Pds · AtProto.Relay · AtProto.AppView
   apps/      AtProto.FirehoseProbe · AtProto.StatusSeeder
   aspire/    AtProto.AppHost · AtProto.ServiceDefaults · AtProto.Hosting.Atproto
 lexicons/    custom lexicon JSON for the demo status record
 samples/     standalone consumers of the published packages (FirehoseConsumer)
-tests/       core interop vectors, firehose, integration, hosting
+tests/       service, integration, hosting, and Lexicon CLI tests
 docs/        newcomer docs and implementation notes
 ```
 
 The [`samples/FirehoseConsumer`](samples/FirehoseConsumer) app is the smallest external consumer: one
-`AtProto.Firehose` package reference, and it decodes the live Bluesky firehose. It builds against the
-published packages (not project references), so it also proves the libraries stand on their own.
+`AtProto.Firehose` package reference, and it decodes the live Bluesky firehose. The shared protocol
+packages are maintained in [`atproto-dotnet`](https://github.com/luisquintanilla/atproto-dotnet) and
+this repository consumes the published GitHub Packages release.
 
 ## Roadmap
 
@@ -163,9 +163,9 @@ The build is phased. Each milestone is independently demoable.
 - **M4** - self-hosted Relay with upstream crawl, global sequence, and aggregated firehose, done.
 - **M5** - Aspire orchestration plus native hosting integrations, done.
 - **Live SignalR UI** - board updates from server-driven projection deltas, done.
-- **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and ten extractable preview NuGet packages, done.
-- **M6 stretch** - mostly landed: federation discovery (each PDS advertises a `place.selfhost.instance` record and `requestCrawl`s the relay; the AppView `/directory` aggregates two PDS instances one relay crawls), `did:plc` creation, blob upload/fetch, stricter Relay MST verification, lexicon-to-C# codegen, and multi-targeting the core libraries (`net9.0;net10.0`). Remaining: publishing the libraries to nuget.org once the API surface settles.
-- **Production profile** - a durable, opt-in "real-world" stack: SQLite-backed PDS (accounts, repositories, and blobs survive a restart) plus a [DuckDB analytics AppView](docs/analytics.md) over the same firehose, both behind `ATPROTO_PROFILE=production`; in-memory stays the zero-config default. The preview libraries publish to [GitHub Packages](docs/packaging.md) on a version tag. Done.
+- **Explorer + docs + preview packages** - inspect real records/repos/CAR, compose your own status, a live firehose ticker, a rich SVG-illustrated docs set, and published shared protocol packages, done.
+- **M6 stretch** - mostly landed: federation discovery (each PDS advertises a `place.selfhost.instance` record and `requestCrawl`s the relay; the AppView `/directory` aggregates two PDS instances one relay crawls), `did:plc` creation, blob upload/fetch, stricter Relay MST verification, and lexicon-to-C# codegen, done. The shared libraries target `net8.0;net10.0` and are published from [`atproto-dotnet`](https://github.com/luisquintanilla/atproto-dotnet).
+- **Production profile** - a durable, opt-in "real-world" stack: SQLite-backed PDS (accounts, repositories, and blobs survive a restart) plus a [DuckDB analytics AppView](docs/analytics.md) over the same firehose, both behind `ATPROTO_PROFILE=production`; in-memory stays the zero-config default. Done.
 - **OAuth authorization server** - the atproto OAuth 2.1 profile end to end: PAR, PKCE (S256), DPoP with server-issued rolling nonces, URL-based `client_id` metadata documents, and DID-anchored discovery, for both public and confidential (`private_key_jwt`) clients. Additive to the existing app-password path, and the reusable primitives ship in the packable [`AtProto.OAuth`](docs/oauth.md) library. Done.
 
 ## License

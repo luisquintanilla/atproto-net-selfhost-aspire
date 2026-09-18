@@ -24,10 +24,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\services\AtProto.Relay\AtProto.Relay.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Car\AtProto.Car.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Cbor\AtProto.Cbor.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Firehose\AtProto.Firehose.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Repo\AtProto.Repo.csproj" />
+    <PackageReference Include="AtProto.Car" />
+    <PackageReference Include="AtProto.Cbor" />
+    <PackageReference Include="AtProto.Firehose" />
+    <PackageReference Include="AtProto.Repo" />
   </ItemGroup>
 
 </Project>

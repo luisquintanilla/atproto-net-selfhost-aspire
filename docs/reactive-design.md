@@ -30,7 +30,7 @@ Think of the firehose as a newswire printer. If the clerk gets behind, the print
 
 See it in this repo:
 
-- `src/core/AtProto.Firehose/FirehoseClient.cs`, `SubscribeAsync`.
+- [`AtProto.Firehose/FirehoseClient.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Firehose/FirehoseClient.cs), `SubscribeAsync`.
 - `System.Threading.Channels.Channel` with capacity from `FirehoseOptions.ChannelCapacity`, default `1024`.
 - Cursor resume happens as events are produced.
 
@@ -50,8 +50,8 @@ The core firehose library hands you a standard outlet. If you want power tools, 
 
 See it in this repo:
 
-- `src/core/AtProto.Firehose/FirehoseObservable.cs`.
-- `src/core/AtProto.Firehose/AtProto.Firehose.csproj` has no Rx dependency.
+- [`AtProto.Firehose/FirehoseObservable.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Firehose/FirehoseObservable.cs).
+- [`AtProto.Firehose.csproj`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Firehose/AtProto.Firehose.csproj) has no Rx dependency.
 
 ## Why Rx is scoped to AppView projection
 

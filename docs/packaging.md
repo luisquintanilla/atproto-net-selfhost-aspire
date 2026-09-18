@@ -1,153 +1,102 @@
 # Packaging
 
-This repo is a **hero app first, a library set second**. Everything runs as one Aspire solution you
-can clone and start. But the reusable pieces are already split into cleanly layered libraries, so when
-the API surface settles they can be lifted out and shipped on their own. This page explains what is
-extractable, how the layering proves the core never depends on a service, and how preview packages are
-produced.
+The self-hosting application consumes the reusable AT Protocol implementation as
+versioned packages. The shared libraries and their tests are maintained in the
+[`atproto-dotnet`](https://github.com/luisquintanilla/atproto-dotnet) repository;
+this repository contains the PDS, Relay, AppView, Aspire composition, and
+hosting integration.
 
-## The extractable libraries
+## Package boundaries
 
-Ten projects are marked packable. The other projects (the services, the two console apps, the AppHost,
-and the tests) are deliberately **not** packaged. They are the hero app that consumes the libraries.
+The shared package set is framework-neutral and targets `net8.0;net10.0`:
 
-![extractable libraries layered so the core never depends on a service](img/packaging.svg)
+| Package | What it provides |
+| --- | --- |
+| `AtProto.Cid` | CIDv1 content identifiers |
+| `AtProto.Cbor` | Canonical DAG-CBOR encoding and decoding |
+| `AtProto.Car` | CARv1 repository archive reading and writing |
+| `AtProto.Crypto` | secp256k1 and P-256 signing primitives |
+| `AtProto.Lexicon` | Lexicon, NSID, and AT-URI value types |
+| `AtProto.Identity` | DID documents and `did:web` resolution |
+| `AtProto.Repo` | Signed commits and the Merkle Search Tree |
+| `AtProto.Firehose` | Firehose frame decoding and pull-based ingest |
+| `AtProto.OAuth` | AT Protocol OAuth, PKCE, DPoP, and client metadata primitives |
+| `AtProto.Xrpc` | Framework-neutral XRPC queries and procedures |
+| `AtProto.Lexicon.SourceGeneration` | Roslyn source generation for Lexicon schemas |
 
-*Figure: Ten preview packages in layers. Each layer depends only on the ones below it, and the hero app on top is never packaged.*
+The only package built from this repository is
+`AtProto.Hosting.Atproto`, the .NET Aspire hosting integration for the local
+PDS, Relay, and AppView topology. Service, app, tool, and test projects are
+not packaged.
 
-| Package | Layer | What it gives you |
-| --- | --- | --- |
-| `AtProto.Cid` | Primitives | Content identifiers (CIDv1, dag-cbor, sha-256). |
-| `AtProto.Crypto` | Primitives | secp256k1 (k256) and NIST P-256 signing. |
-| `AtProto.Lexicon` | Primitives | Lexicon, NSID, and AT-URI value types. |
-| `AtProto.OAuth` | Primitives | atproto OAuth profile: DPoP proofs and rolling nonces, PKCE, EC P-256 JWK and `jkt` thumbprints, `client_id` metadata documents (SSRF-hardened), and DPoP-bound access tokens. |
-| `AtProto.Cbor` | Encodings + identity | Canonical DAG-CBOR encode/decode. |
-| `AtProto.Car` | Encodings + identity | CARv1 read/write (the repo export format). |
-| `AtProto.Identity` | Encodings + identity | DID documents, did:web resolution, and did:plc creation. |
-| `AtProto.Repo` | Repository | Signed commits and the Merkle Search Tree (MST). |
-| `AtProto.Firehose` | Firehose / ingest | Firehose frame decoding and the reactive ingest core. |
-| `AtProto.Hosting.Atproto` | Aspire integration | .NET Aspire hosting integration for the stack. |
+## Consuming the shared packages
 
-## Target frameworks
+Project files use centrally managed exact versions:
 
-The nine core libraries multi-target **`net9.0` and `net10.0`**, so you can consume them from either
-runtime; each preview package carries both `lib/net9.0` and `lib/net10.0` assemblies. The Aspire
-integration (`AtProto.Hosting.Atproto`) targets **`net10.0`** only, matching the .NET Aspire version it
-builds on.
-
-## Why the layering matters
-
-The rule is simple: **a library may reference only lower layers, never a service.** `AtProto.Firehose`
-depends on `AtProto.Repo`, `AtProto.Car`, `AtProto.Cbor`, `AtProto.Cid`, and `AtProto.Lexicon`, and on
-nothing from `AtProto.Pds`, `AtProto.Relay`, or `AtProto.AppView`. That is what makes each piece
-extractable: you can take `AtProto.Car` on its own to read a CAR file, or `AtProto.Firehose` on its own
-to decode a firehose, without dragging a web host along.
-
-The dependency graph is enforced by the project references themselves, and you can see it in any
-package's `.nuspec`: the sibling `<dependency>` entries only ever point at other packable libraries.
-`AtProto.OAuth` sits at the base with no atproto dependencies at all: it implements its ES256 JOSE and
-JWK handling directly on the BCL, so you can take it on its own to build an atproto authorization server
-or client.
-
-## How the gating works
-
-Packaging is opt-in, so the hero app stays free of packaging side effects.
-
-- **`Directory.Build.props`** sets `IsPackable=false` for every project by default, plus the shared
-  metadata (authors, license `MIT`, repository URL, tags, `VersionPrefix`). These properties are inert
-  for anything that never packs.
-- **A library opts in** with two lines in its `.csproj`:
-
-  ```xml
-  <IsPackable>true</IsPackable>
-  <Description>...</Description>
-  ```
-
-- **`Directory.Build.targets`** applies the pack-only settings (XML docs, symbol packages, SourceLink,
-  the shared package README) *only* when `IsPackable` is true, so services, apps, and tests are never
-  touched.
-
-To confirm the gate, run `dotnet pack` and check the output: exactly the ten libraries above produce a
-`.nupkg` (and a `.snupkg`); nothing else does.
-
-## Versioning intent
-
-The libraries ship as a **preview line** (`0.2.0`) and are **not published to nuget.org yet**. The
-public API is still moving as the services grow (richer identity, lexicons, and granular OAuth scopes),
-and we do not
-want to freeze names and signatures before they have settled. Preview artifacts let you try the
-libraries and pin exact versions without implying a stability promise we cannot keep yet.
-
-When the surface settles, publishing to nuget.org is a small step: drop the preview framing and point
-the release workflow at nuget.org.
-
-## How preview packages are produced
-
-Locally:
-
-```bash
-dotnet pack atproto-net-selfhost-aspire.slnx --configuration Release -o ./artifacts/packages
+```xml
+<PackageReference Include="AtProto.Firehose" />
+<PackageReference Include="AtProto.Repo" />
 ```
 
-In CI, the `pack` job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs after the build
-job, packs in Release with `ContinuousIntegrationBuild=true` (deterministic paths and SourceLink), and
-uploads the `.nupkg` and `.snupkg` files as the `nuget-packages` build artifact. The `publish` job uses
-the same pack command and only pushes to GitHub Packages on version tags or manual runs.
+The current preview line is `0.3.0-preview.1`. The package dependency graph
+keeps protocol libraries below the hosting and service layers; consuming a
+single package brings in only its shared-library dependencies.
 
-## Install from GitHub Packages
-
-Preview packages are published to GitHub Packages, not nuget.org yet. Maintainers cut a release by
-pushing a `vX.Y.Z` tag, which triggers the `publish` job and pushes the ten packable libraries to:
-
-```text
-https://nuget.pkg.github.com/luisquintanilla/index.json
-```
-
-To consume them, add the GitHub Packages source to your project or user NuGet configuration. Start from
-[`docs/nuget.config.sample`](nuget.config.sample) if you want a file-based setup that keeps nuget.org
-available for normal restores.
-
-The honest papercut: GitHub Packages requires authentication even for public packages. Use a GitHub PAT
-with the `read:packages` scope, then add the source with credentials. On Linux and in CI, the clear-text
-password option is the portable path:
+The repository's CI configures GitHub Packages with the ephemeral
+`GITHUB_TOKEN` before restore. Local development needs a PAT with the
+`read:packages` scope:
 
 ```bash
 dotnet nuget add source https://nuget.pkg.github.com/luisquintanilla/index.json \
-  --name github-atproto-selfhost \
+  --name github-atproto \
   --username "$GITHUB_USERNAME" \
   --password "$GITHUB_TOKEN" \
   --store-password-in-clear-text
 ```
 
-Then install a package as usual:
+Then install an exact preview version:
 
 ```bash
-dotnet add package AtProto.Repo --version 0.2.0
+dotnet add package AtProto.Firehose --version 0.3.0-preview.1 \
+  --source github-atproto
 ```
 
-### Trying a preview package from another project
+## Building and publishing
 
-Point a local NuGet feed at the packed output:
+The shared repository owns the build, test, pack, and GitHub Packages
+publication workflow for the reusable libraries. Its workflow validates the
+full shared solution and publishes packages on a version tag or a manual
+dispatch.
+
+From the shared repository:
 
 ```bash
-dotnet nuget add source "$(pwd)/artifacts/packages" --name atproto-preview
-# then, in your project
-dotnet add package AtProto.Car --version 0.2.0 --source atproto-preview
+dotnet restore atproto-dotnet.slnx
+dotnet build atproto-dotnet.slnx --configuration Release --no-restore
+dotnet test atproto-dotnet.slnx --configuration Release --no-build
+dotnet pack atproto-dotnet.slnx --configuration Release --no-restore \
+  --output artifacts/packages
 ```
 
-For a complete, runnable example, see the [`FirehoseConsumer` sample](../samples/FirehoseConsumer),
-a standalone console app that references `AtProto.Firehose` as a package and decodes the live Bluesky
-firehose. It restores from a local feed by default (no authentication), so it doubles as a smoke test
-that the published packages are consumable outside this repository.
+From this repository, the local Aspire hosting integration can be packed with:
 
-## The extraction path
+```bash
+dotnet pack src/aspire/AtProto.Hosting.Atproto/AtProto.Hosting.Atproto.csproj \
+  --configuration Release --output artifacts/packages
+```
 
-When a library is ready to stand on its own:
+The self-hosting CI restores and tests against the published shared packages.
+Its package job only produces the hosting integration artifact; shared package
+publication does not happen from this repository.
 
-1. It already builds, packs, and carries metadata. No project restructuring is needed.
-2. Confirm its layer only references lower layers (the graph above), so the extracted package has no
-   surprise dependency on a service.
-3. Decide the public version, drop the preview framing in `Directory.Build.props`, and publish.
+## Versioning
 
-Until then, treat the packages as a preview of the building blocks, and the running Aspire solution as
-the real product.
+Pin preview package versions while the public API evolves. A shared-library
+release changes the version in `atproto-dotnet/Directory.Build.props`, updates
+the consumer's central package versions here, and publishes from the shared
+repository. Hosting integration versions remain controlled by this repository's
+`Directory.Build.props`.
+
+The package split is intentional: protocol behavior can be consumed without
+Aspire, while the self-hosting repository can evolve its service topology
+without duplicating protocol implementations.

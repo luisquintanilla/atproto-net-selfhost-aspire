@@ -7,13 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\AtProto.Cid\AtProto.Cid.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Cbor\AtProto.Cbor.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Car\AtProto.Car.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Crypto\AtProto.Crypto.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Repo\AtProto.Repo.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Firehose\AtProto.Firehose.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.OAuth\AtProto.OAuth.csproj" />
+    <PackageReference Include="AtProto.Cid" />
+    <PackageReference Include="AtProto.Cbor" />
+    <PackageReference Include="AtProto.Car" />
+    <PackageReference Include="AtProto.Crypto" />
+    <PackageReference Include="AtProto.Repo" />
+    <PackageReference Include="AtProto.Firehose" />
+    <PackageReference Include="AtProto.OAuth" />
     <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />
   </ItemGroup>
 

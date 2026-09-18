@@ -64,14 +64,16 @@ A **repo** is like a **git repo of your social data**: a signed, content-address
 
 The PDS stores records under keys shaped as `collection/rkey`. Each write rebuilds the Merkle Search Tree, signs a new commit with secp256k1 or P-256, and writes the changed blocks into a CAR slice for the firehose event. The full repo export is also a CARv1 file.
 
-This is a simplification. The deeper details are in `src/core/AtProto.Repo`, especially `RepoStore.cs`, `Mst.cs`, and `Commits.cs`.
+This is a simplification. The deeper details are in the
+[`AtProto.Repo` package source](https://github.com/luisquintanilla/atproto-dotnet/tree/main/src/core/AtProto.Repo),
+especially `RepoStore.cs`, `Mst.cs`, and `Commits.cs`.
 
 ### See it in this repo
 
-- Mutable repo: `src/core/AtProto.Repo/RepoStore.cs`.
-- MST: `src/core/AtProto.Repo/Mst.cs`.
-- Commit signing: `src/core/AtProto.Repo/Commits.cs` and `src/core/AtProto.Crypto/`.
-- CAR read and write: `src/core/AtProto.Car/`.
+- Mutable repo: [`RepoStore.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/RepoStore.cs).
+- MST: [`Mst.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/Mst.cs).
+- Commit signing: [`Commits.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/Commits.cs) and the [`AtProto.Crypto` package source](https://github.com/luisquintanilla/atproto-dotnet/tree/main/src/core/AtProto.Crypto).
+- CAR read and write: the [`AtProto.Car` package source](https://github.com/luisquintanilla/atproto-dotnet/tree/main/src/core/AtProto.Car).
 - Download a repo:
 
 ```bash
@@ -124,7 +126,7 @@ The status collection is `place.selfhost.status`. The record key is `self`. Toge
 
 ### See it in this repo
 
-- NSID and AT-URI helpers: `src/core/AtProto.Lexicon/Nsid.cs` and `AtUri.cs`.
+- NSID and AT-URI helpers: [`Nsid.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Lexicon/Nsid.cs) and `AtUri.cs`.
 - AppView configured collection: `src/aspire/AtProto.AppHost/AppHost.cs`, `.WithCollection("place.selfhost.status")`.
 
 ## Lexicon, a shared contract
@@ -144,7 +146,7 @@ The lexicon file declares a record named `place.selfhost.status`, requires `stat
 ### See it in this repo
 
 - `lexicons/place.selfhost.status.json`.
-- Lexicon primitives: `src/core/AtProto.Lexicon/`.
+- Lexicon primitives: the [`AtProto.Lexicon` package source](https://github.com/luisquintanilla/atproto-dotnet/tree/main/src/core/AtProto.Lexicon).
 
 ## XRPC, typed HTTP endpoints
 
@@ -204,7 +206,7 @@ The PDS accepts repo writes and emits `#commit` frames on `com.atproto.sync.subs
 - PDS: `src/services/AtProto.Pds/`.
 - Relay: `src/services/AtProto.Relay/`.
 - AppView: `src/services/AtProto.AppView/`.
-- Firehose library: `src/core/AtProto.Firehose/`.
+- Firehose library: the [`AtProto.Firehose` package source](https://github.com/luisquintanilla/atproto-dotnet/tree/main/src/core/AtProto.Firehose).
 - Aspire wiring: `src/aspire/AtProto.AppHost/AppHost.cs`.
 
 ## Glossary
@@ -220,7 +222,7 @@ The PDS accepts repo writes and emits `#commit` frames on `com.atproto.sync.subs
 | Firehose | Live stream of repo events | `com.atproto.sync.subscribeRepos` |
 | Handle | Friendly name pointing at a DID | `demo1.pds.localhost` |
 | Lexicon | Shared schema or endpoint contract | `lexicons/place.selfhost.status.json` |
-| MST | Merkle Search Tree, the repo's tamper-evident tree | `src/core/AtProto.Repo/Mst.cs` |
+| MST | Merkle Search Tree, the repo's tamper-evident tree | [`AtProto.Repo/Mst.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/Mst.cs) |
 | NSID | Namespaced identifier | `place.selfhost.status` |
 | PDS | Personal Data Server, your data home | `src/services/AtProto.Pds/` |
 | Record | One app data object | the 🌤 status JSON |

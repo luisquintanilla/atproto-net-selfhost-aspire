@@ -26,12 +26,12 @@
     <ProjectReference Include="..\..\src\services\AtProto.Pds\AtProto.Pds.csproj" />
     <ProjectReference Include="..\..\src\services\AtProto.AppView\AtProto.AppView.csproj" />
     <ProjectReference Include="..\..\src\services\AtProto.Relay\AtProto.Relay.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Firehose\AtProto.Firehose.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Car\AtProto.Car.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Repo\AtProto.Repo.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Crypto\AtProto.Crypto.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.Cbor\AtProto.Cbor.csproj" />
-    <ProjectReference Include="..\..\src\core\AtProto.OAuth\AtProto.OAuth.csproj" />
+    <PackageReference Include="AtProto.Firehose" />
+    <PackageReference Include="AtProto.Car" />
+    <PackageReference Include="AtProto.Repo" />
+    <PackageReference Include="AtProto.Crypto" />
+    <PackageReference Include="AtProto.Cbor" />
+    <PackageReference Include="AtProto.OAuth" />
   </ItemGroup>
 
 </Project>

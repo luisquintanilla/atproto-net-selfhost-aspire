@@ -22,7 +22,7 @@ Done. Decoded 20 commit events from relay1.us-west.bsky.network using the publis
 The entire program depends on a single line (`FirehoseConsumer.csproj`):
 
 ```xml
-<PackageReference Include="AtProto.Firehose" Version="0.2.0" />
+<PackageReference Include="AtProto.Firehose" Version="0.3.0-preview.1" />
 ```
 
 `AtProto.Firehose` pulls in its siblings (`AtProto.Cid`, `AtProto.Cbor`, `AtProto.Car`, `AtProto.Repo`,

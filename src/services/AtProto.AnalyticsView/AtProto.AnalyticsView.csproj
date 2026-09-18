@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\AtProto.Firehose\AtProto.Firehose.csproj" />
+    <PackageReference Include="AtProto.Firehose" />
     <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />
   </ItemGroup>
 

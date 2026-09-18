@@ -34,7 +34,7 @@ Code pointers:
 - Compose explorer surface: `src/services/AtProto.AppView/Program.cs` in the explorer workstream.
 - PDS write mapping: `src/services/AtProto.Pds/PdsHost.cs`, `MapRepo`.
 - Commit creation: `src/services/AtProto.Pds/PdsService.cs`, `Commit`.
-- Repo internals: `src/core/AtProto.Repo/RepoStore.cs`.
+- Repo internals: [`AtProto.Repo/RepoStore.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/RepoStore.cs).
 - Relay global sequence: `src/services/AtProto.Relay/RelayService.cs`.
 - AppView projection: `FirehoseIngestService.cs`, `PresenceProjection.cs`, `PresenceStore.cs`.
 - Browser push: `PresenceBroadcaster.cs` and `/hub/presence` in `Program.cs`.

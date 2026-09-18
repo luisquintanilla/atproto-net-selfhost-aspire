@@ -28,7 +28,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>atproto;at-protocol;bluesky;decentralized;fediverse;dotnet</PackageTags>
-    <!-- Preview line: the API surface is still settling, so these are not published to nuget.org yet. -->
+    <!-- Preview version for the Aspire hosting integration. Shared protocol package versions are managed centrally. -->
     <VersionPrefix>0.2.0</VersionPrefix>
   </PropertyGroup>
 </Project>
