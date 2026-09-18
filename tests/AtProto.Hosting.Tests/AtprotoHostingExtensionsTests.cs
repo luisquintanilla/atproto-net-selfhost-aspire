@@ -7,7 +7,7 @@ namespace AtProto.Hosting.Tests;
 /// <summary>
 /// M5 proof: the "native" Aspire hosting integration wires a self-hosted atproto stack's topology
 /// correctly. Builds the application model with the semantic extensions (over fake project metadata,
-/// so nothing is launched) and asserts the resource graph the AppHost declares: the PDS advertises
+/// so nothing is launched) and asserts the topology the AppHost declares: the PDS advertises
 /// its address, the Relay crawls the PDS, and the AppView subscribes the Relay and indexes a chosen
 /// collection — including the exact env-var contract the services read and the startup ordering.
 /// </summary>

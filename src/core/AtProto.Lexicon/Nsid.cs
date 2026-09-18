@@ -66,6 +66,11 @@ public readonly record struct Nsid
                     return false;
                 }
             }
+            if (!isName && (seg[0] == '-' || seg[^1] == '-'))
+            {
+                error = "authority segment cannot start or end with a hyphen";
+                return false;
+            }
             if (char.IsAsciiDigit(seg[0]) && !isName)
             {
                 error = "authority segment cannot start with a digit";

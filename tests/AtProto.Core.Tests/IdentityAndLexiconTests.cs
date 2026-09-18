@@ -50,6 +50,10 @@ public sealed class IdentityAndLexiconTests
     [InlineData("bad")]
     [InlineData("only.two")]
     [InlineData("app.bsky.feed.")]
+    [InlineData("-app.bsky.feed.post")]
+    [InlineData("app.-bsky.feed.post")]
+    [InlineData("app.bsky-.feed.post")]
+    [InlineData("app.bsky.feed-.post")]
     public void Nsid_rejects_malformed(string value) =>
         Assert.False(Nsid.TryParse(value, out _));
 
