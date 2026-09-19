@@ -22,36 +22,48 @@ Done. Decoded 20 commit events from relay1.us-west.bsky.network using the publis
 The entire program depends on a single line (`FirehoseConsumer.csproj`):
 
 ```xml
-<PackageReference Include="AtProto.Firehose" Version="0.2.0" />
+<PackageReference Include="AtProto.Firehose" Version="0.3.0-preview.1" />
 ```
 
 `AtProto.Firehose` pulls in its siblings (`AtProto.Cid`, `AtProto.Cbor`, `AtProto.Car`, `AtProto.Repo`,
-`AtProto.Lexicon`, and transitively `AtProto.Crypto` and `AtProto.Identity`) as package dependencies, so
-that one reference is enough to decode the firehose.
+`AtProto.Lexicon`, and transitively `AtProto.Crypto`) as package dependencies, so that one reference is
+enough to decode the firehose.
 
 ## Run it
 
-You need the packages on a feed the sample can restore from. Two options.
+You need the packages on a feed the sample can restore from. The published GitHub Packages feed is the
+normal path; a local feed is available for offline development.
 
-### Option A: local feed (no authentication, works offline)
+### Option A: GitHub Packages (published feed)
 
-From the repository root, pack the libraries into the feed this sample expects, then run it:
+Configure the `github` source once with a Personal Access Token that has `read:packages`:
 
 ```bash
-dotnet pack atproto-net-selfhost-aspire.slnx -c Release -o samples/FirehoseConsumer/local-feed
+dotnet nuget add source https://nuget.pkg.github.com/luisquintanilla/index.json \
+  --name github \
+  --username "$GITHUB_USERNAME" \
+  --password "$GITHUB_TOKEN" \
+  --store-password-in-clear-text
+
 cd samples/FirehoseConsumer
 dotnet run
 ```
 
-`local-feed/` is git-ignored; it is build output you regenerate whenever you like. The bundled
-`nuget.config` points at it by default.
+GitHub Packages requires authentication even for public packages. The bundled `nuget.config` names this
+source `github` and also keeps the optional local feed available.
 
-### Option B: GitHub Packages (the real published feed)
+### Option B: local feed (offline development)
 
-The libraries are published to GitHub Packages on every version tag. To consume them from there, add the
-GitHub source with a Personal Access Token that has `read:packages`, as described in
-[docs/packaging.md](../../docs/packaging.md). GitHub Packages requires authentication even for public
-packages, which is why the local feed is the zero-setup default here.
+From a checkout of `atproto-dotnet` next to this repository, pack the shared libraries into the feed this
+sample expects, then run it:
+
+```bash
+dotnet pack ../atproto-dotnet/atproto-dotnet.slnx -c Release -o samples/FirehoseConsumer/local-feed
+cd samples/FirehoseConsumer
+dotnet run
+```
+
+`local-feed/` is git-ignored; it is build output you regenerate whenever you like.
 
 ## Point it somewhere else
 

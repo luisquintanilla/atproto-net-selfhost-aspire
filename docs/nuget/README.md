@@ -1,31 +1,30 @@
-# atproto-net-selfhost-aspire (preview packages)
+# AtProto.Hosting.Atproto
 
-These are the reusable building blocks behind
-[**atproto-net-selfhost-aspire**](https://github.com/luisquintanilla/atproto-net-selfhost-aspire),
-a from-scratch .NET stack for self-hosting the [AT Protocol](https://atproto.com/) (the protocol
-behind Bluesky): a Personal Data Server (PDS), a Relay, and an AppView, wired together with .NET Aspire.
+This package provides the .NET Aspire hosting integration for the self-hosted
+AT Protocol stack. It composes the PDS, Relay, and AppView resources and is
+targeted at `net10.0`.
 
-The libraries are split so you can take only what you need:
+The reusable protocol implementation is published separately as
+`AtProto.*` packages from the
+[`atproto-dotnet`](https://github.com/luisquintanilla/atproto-dotnet)
+repository:
 
-| Package | What it gives you |
+| Package | Purpose |
 | --- | --- |
-| `AtProto.Cid` | Content identifiers (CIDv1, dag-cbor, sha-256) |
-| `AtProto.Cbor` | Canonical DAG-CBOR encoding/decoding |
-| `AtProto.Car` | CARv1 read/write (the repo export format) |
-| `AtProto.Crypto` | k256/p256 signing primitives |
-| `AtProto.Lexicon` | Lexicon/NSID + AT-URI types |
-| `AtProto.Identity` | DID documents and did:web resolution |
-| `AtProto.Repo` | Signed commits + the MST (Merkle Search Tree) |
-| `AtProto.Firehose` | Firehose frame decoding + a reactive ingest core |
-| `AtProto.Hosting.Atproto` | .NET Aspire hosting integration for the services |
+| `AtProto.Cid` | CIDv1 content identifiers |
+| `AtProto.Cbor` | Canonical DAG-CBOR encoding and decoding |
+| `AtProto.Car` | CARv1 repository archive reading and writing |
+| `AtProto.Crypto` | secp256k1 and P-256 signing primitives |
+| `AtProto.Lexicon` | Lexicon, NSID, and AT-URI value types |
+| `AtProto.Identity` | DID documents and `did:web` resolution |
+| `AtProto.Repo` | Signed commits and Merkle Search Trees |
+| `AtProto.Firehose` | Firehose frame decoding and pull-based ingest |
+| `AtProto.OAuth` | OAuth, PKCE, DPoP, and client metadata primitives |
+| `AtProto.Xrpc` | Framework-neutral XRPC client |
+| `AtProto.Lexicon.SourceGeneration` | Roslyn Lexicon source generator |
 
-> **Preview.** The API surface is still settling, so these are published as preview artifacts (build
-> outputs and, optionally, GitHub Packages) rather than to nuget.org. Pin exact versions if you depend
-> on them. See the repo's `docs/packaging.md` for the extraction path and layering.
-
-New to the protocol? Start with the repo's
-[primer](https://github.com/luisquintanilla/atproto-net-selfhost-aspire/blob/main/docs/primer.md) and
-[how-it-works](https://github.com/luisquintanilla/atproto-net-selfhost-aspire/blob/main/docs/how-it-works.md)
-walkthrough.
+The shared packages are distributed through GitHub Packages. See the
+[packaging guide](https://github.com/luisquintanilla/atproto-net-selfhost-aspire/blob/main/docs/packaging.md)
+for authentication and exact-version installation instructions.
 
 Licensed under the MIT License.

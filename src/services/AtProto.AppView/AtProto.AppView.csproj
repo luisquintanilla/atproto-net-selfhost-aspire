@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\AtProto.Firehose\AtProto.Firehose.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Car\AtProto.Car.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Cbor\AtProto.Cbor.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Identity\AtProto.Identity.csproj" />
-    <ProjectReference Include="..\..\core\AtProto.Lexicon\AtProto.Lexicon.csproj" />
+    <PackageReference Include="AtProto.Firehose" />
+    <PackageReference Include="AtProto.Car" />
+    <PackageReference Include="AtProto.Cbor" />
+    <PackageReference Include="AtProto.Identity" />
+    <PackageReference Include="AtProto.Lexicon" />
     <ProjectReference Include="..\..\aspire\AtProto.ServiceDefaults\AtProto.ServiceDefaults.csproj" />
   </ItemGroup>
 

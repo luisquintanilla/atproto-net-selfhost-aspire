@@ -6,6 +6,20 @@
 
     <!-- Core codecs -->
     <PackageVersion Include="System.Formats.Cbor" Version="10.0.8" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.8" />
+
+    <!-- Shared AT Protocol libraries -->
+    <PackageVersion Include="AtProto.Cid" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Cbor" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Car" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Crypto" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Repo" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Identity" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Lexicon" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Firehose" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.OAuth" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Xrpc" Version="0.3.0-preview.1" />
+    <PackageVersion Include="AtProto.Lexicon.SourceGeneration" Version="0.3.0-preview.1" />
 
     <!-- Durable PDS store (production profile; AtProto.Pds only) -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />

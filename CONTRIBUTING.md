@@ -31,7 +31,7 @@ The suite is xUnit and validates against real AT Protocol fixtures (repo CARs, C
 dotnet test atproto-net-selfhost-aspire.slnx
 
 # one project while iterating
-dotnet test tests/AtProto.Core.Tests/AtProto.Core.Tests.csproj
+dotnet test tests/AtProto.Pds.Tests/AtProto.Pds.Tests.csproj
 ```
 
 Keep the pure pieces (stores, encoders, projections) testable without timing or a network, the way the
@@ -57,21 +57,21 @@ ports.
 ## Repo map
 
 ```
-src/core/       the layered libraries: primitives (Cid, Crypto, Lexicon) ->
-                encodings + identity (Cbor, Car, Identity) -> Repo -> Firehose
 src/services/   the hero app: PDS, Relay, AppView (not packaged)
 src/aspire/     AppHost (the topology) + AtProto.Hosting.Atproto (the Aspire integration)
 tools/          AtProto.Lexicon.CodeGen (lexicon JSON -> typed C# record)
-tests/          xUnit suites + real fixtures under tests/fixtures/
+tests/          xUnit service and integration suites + real fixtures under tests/fixtures/
 lexicons/       record schemas (place.selfhost.status, place.selfhost.instance)
 docs/           the docs set + docs/diagrams (the SVG generator)
 ```
 
 ## The one structural rule: layering
 
-**A library may reference only lower layers, never a service.** `AtProto.Firehose` may use
+The shared protocol libraries are maintained in the
+[`atproto-dotnet`](https://github.com/luisquintanilla/atproto-dotnet) repository. Its layering rule
+means `AtProto.Firehose` may use
 `AtProto.Repo`/`AtProto.Car`/`AtProto.Cbor`/`AtProto.Cid`/`AtProto.Lexicon`, but nothing in
-`src/services/`. That rule is what keeps the libraries extractable. See
+this repository's `src/services/`. See
 [docs/packaging.md](docs/packaging.md) for the full layer map and the `IsPackable` gate (services,
 tools, and tests are never packaged).
 

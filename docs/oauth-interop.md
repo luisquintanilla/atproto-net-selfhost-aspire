@@ -16,7 +16,7 @@ server rejects the thing it must reject.
 
 | Test class | What it proves |
 | --- | --- |
-| `AtProto.OAuth.Tests` (core) | The protocol primitives in isolation: DPoP proof validation and rolling nonces, PKCE `S256`, JWK and `jkt` thumbprints, client-metadata parsing and the SSRF guard, client assertions, and access-token issue and validate. Includes the RFC known-answer vectors (Layer 3 below). |
+| Shared repository OAuth tests | The protocol primitives in isolation: DPoP proof validation and rolling nonces, PKCE `S256`, JWK and `jkt` thumbprints, client-metadata parsing and the SSRF guard, client assertions, and access-token issue and validate. Includes the RFC known-answer vectors (Layer 3 below). |
 | `OAuthMetadataTests` | The two discovery documents advertise the right issuer, endpoints, `S256`, `ES256`, DPoP, PAR-required, `none` and `private_key_jwt` auth, and the `atproto` / `transition:generic` scopes. |
 | `OAuthParTests` | PAR issues a `request_uri` only after a DPoP nonce challenge, and rejects a replayed proof, a proof bound to the wrong endpoint, `plain` PKCE, an unregistered `redirect_uri`, and a scope beyond the client's registration. |
 | `OAuthAuthorizeTests` | The authorization interface issues a code on approval, returns `access_denied` on deny, re-renders (no code) on a wrong password, and rejects a missing CSRF token or an unknown `request_uri`. |
@@ -28,9 +28,6 @@ Run them:
 
 ```bash
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
-
-# The protocol primitives and RFC vectors.
-dotnet test tests/AtProto.OAuth.Tests/AtProto.OAuth.Tests.csproj
 
 # The in-process flow and the negative matrix.
 dotnet test tests/AtProto.Pds.Tests/AtProto.Pds.Tests.csproj --filter "FullyQualifiedName~OAuth"
@@ -90,7 +87,7 @@ assumptions. Node.js is only needed for this optional second pass.
 
 ## Layer 3: known-answer RFC vectors
 
-The primitives are pinned to the specs, not just to round-tripping against themselves. These live in
+The primitives are pinned to the specs, not just to round-tripping against themselves. These live in the shared repository's
 `tests/AtProto.OAuth.Tests/RfcVectorsTests.cs`:
 
 - **RFC 7638** (JWK thumbprint): the `jkt` of the example key.

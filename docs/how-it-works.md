@@ -84,7 +84,7 @@ curl -X POST http://localhost:5271/xrpc/com.atproto.repo.putRecord \
 }
 ```
 
-See it in this repo: `src/services/AtProto.Pds/PdsHost.cs` maps `putRecord`; `src/services/AtProto.Pds/PdsService.cs` publishes the commit; `src/core/AtProto.Repo/RepoStore.cs` rebuilds and signs the repo.
+See it in this repo: `src/services/AtProto.Pds/PdsHost.cs` maps `putRecord`; `src/services/AtProto.Pds/PdsService.cs` publishes the commit; [`AtProto.Repo/RepoStore.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/RepoStore.cs) rebuilds and signs the repo.
 
 ## 3. The PDS emits a `#commit` frame
 

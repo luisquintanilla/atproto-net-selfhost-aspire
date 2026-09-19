@@ -48,17 +48,20 @@ extractable. See [packaging](packaging.md) for the full layer map and the previe
 
 **Steps:**
 
-1. Pack the libraries and add the local feed (from [packaging](packaging.md#how-preview-packages-are-produced)):
+1. Add the GitHub Packages feed (from [packaging](packaging.md#consuming-the-shared-packages)):
 
    ```bash
-   dotnet pack atproto-net-selfhost-aspire.slnx -c Release -o ./artifacts/packages
-   dotnet nuget add source "$(pwd)/artifacts/packages" --name atproto-preview
+   dotnet nuget add source https://nuget.pkg.github.com/luisquintanilla/index.json \
+     --name github-atproto \
+     --username "$GITHUB_USERNAME" \
+     --password "$GITHUB_TOKEN" \
+     --store-password-in-clear-text
    ```
 
 2. Reference the one package you need:
 
    ```bash
-   dotnet add package AtProto.Car --version 0.2.0 --source atproto-preview
+   dotnet add package AtProto.Car --version 0.3.0-preview.1 --source github-atproto
    ```
 
 **Minimal shape** (read a repo export, then decode a live firehose):
@@ -83,8 +86,9 @@ await foreach (RepoEvent ev in client.SubscribeAsync())
 If you want Rx operators, adapt the pull stream to a BCL `IObservable<T>` with
 `source.ToObservable()` from `FirehoseObservable`, then opt into `System.Reactive` yourself.
 
-**Code pointers:** `src/core/AtProto.Car/CarReader.cs`, `src/core/AtProto.Firehose/FirehoseClient.cs`,
-`src/core/AtProto.Firehose/FirehoseObservable.cs`.
+**Code pointers:** [`AtProto.Car/CarReader.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Car/CarReader.cs),
+[`AtProto.Firehose/FirehoseClient.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Firehose/FirehoseClient.cs),
+[`AtProto.Firehose/FirehoseObservable.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Firehose/FirehoseObservable.cs).
 
 **Verify:** your project builds against the package, and `VerifyIntegrity()` does not throw on a real
 `repo.car` (the fixtures under `tests/fixtures/` are real repo exports).
@@ -278,9 +282,9 @@ a no-op) with `SqlitePdsPersistence` swapped in when `Pds:Storage=sqlite`, writt
 and replayed on startup with a verified Merkle Search Tree root. See [storage.md](storage.md) for the
 schema and the restart-durability test.
 
-**Code pointers:** `src/core/AtProto.Firehose/CursorStore.cs` (the simple template),
+**Code pointers:** [`AtProto.Firehose/CursorStore.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Firehose/CursorStore.cs) (the simple template),
 `src/services/AtProto.Pds/{IPdsPersistence.cs, SqlitePdsPersistence.cs}` (the write-through example),
-`src/services/AtProto.AppView/PresenceStore.cs`, `src/core/AtProto.Repo/RepoStore.cs`
+`src/services/AtProto.AppView/PresenceStore.cs`, [`AtProto.Repo/RepoStore.cs`](https://github.com/luisquintanilla/atproto-dotnet/blob/main/src/core/AtProto.Repo/RepoStore.cs)
 (`Snapshot`/`Load`).
 
 **Verify:** the existing tests still pass against the in-memory default, and your durable store passes
@@ -337,10 +341,13 @@ resolves both methods, and the offline `did:plc` creation path is implemented.
   `did:plc` (via `plc.directory`) and `did:web` documents.
 
 **Code pointers:** `src/services/AtProto.Pds/PdsOptions.cs` (`PdsIdentity`),
-`src/core/AtProto.Identity/{PlcOperation.cs, IdentityResolver.cs}`.
+[`AtProto.Identity`](https://github.com/luisquintanilla/atproto-dotnet/tree/main/src/core/AtProto.Identity)
+(`PlcOperation.cs`, `IdentityResolver.cs`).
 
-**Verify:** `AtProto.Core.Tests` derives a `did:plc` that matches a real Bluesky vector; a resolved DID
-document exposes the expected service endpoint.
+**Verify:** the shared repository's
+[`AtProto.Core.Tests`](https://github.com/luisquintanilla/atproto-dotnet/tree/main/tests/AtProto.Core.Tests)
+derives a `did:plc` that matches a real Bluesky vector; a resolved DID document exposes the expected
+service endpoint.
 
 ## Path I - Bring your own OAuth client
 
@@ -424,12 +431,12 @@ design: the presence AppView's latest-wins key/value read model, a rebuildable p
 key/value store serves correctly at any scale here. See [storage profiles](storage.md). **Path to
 persist another store:** the seam from [Path F](#path-f---persist-or-swap-storage).
 
-### Publishing to nuget.org (deferred)
+### Publishing packages
 
-The ten libraries build, pack, and carry metadata, but ship as a **preview line** (`0.2.0`) that is
-not pushed to nuget.org while the public API settles. **Path:** drop the preview framing in
-`Directory.Build.props` and add a push step to the `pack` CI job. See
-[packaging](packaging.md#versioning-intent).
+The shared protocol libraries are maintained in
+[`atproto-dotnet`](https://github.com/luisquintanilla/atproto-dotnet) and published as the
+`0.3.0-preview.1` package line to GitHub Packages. This repository publishes only the
+`AtProto.Hosting.Atproto` Aspire integration package. See [packaging](packaging.md).
 
 ### did:plc directory publish (create-only)
 

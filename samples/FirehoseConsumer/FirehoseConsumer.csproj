@@ -11,10 +11,10 @@
   <ItemGroup>
     <!--
       A normal package reference, exactly as an external adopter writes it. AtProto.Firehose pulls in
-      its siblings (Cid, Cbor, Car, Repo, Lexicon, and transitively Crypto and Identity) as package
+      its siblings (Cid, Cbor, Car, Repo, and Lexicon, and transitively Crypto) as package
       dependencies, so this single reference is enough to decode the firehose.
     -->
-    <PackageReference Include="AtProto.Firehose" Version="0.2.0" />
+    <PackageReference Include="AtProto.Firehose" Version="0.3.0-preview.1" />
   </ItemGroup>
 
 </Project>
