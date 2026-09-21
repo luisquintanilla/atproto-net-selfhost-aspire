@@ -364,8 +364,9 @@ document; the server fetches and validates it (SSRF-hardened) on every request. 
 **Steps:**
 
 1. **Publish a `client-metadata.json`** at a stable HTTPS URL. That URL is your `client_id`. List your
-   `redirect_uris`, the `atproto` scope (plus `transition:generic` for write access), and mark the
-   client as DPoP-bound.
+   `redirect_uris`, the `atproto` scope plus the exact repository grants the client needs, and mark the
+   client as DPoP-bound. Use `transition:generic` only when the legacy compatibility write level is
+   intentional.
 2. **Choose a client type.** A *public* client uses `token_endpoint_auth_method: "none"` and needs no
    keys (good for browser and native apps). A *confidential* client adds `private_key_jwt`: publish an
    EC P-256 key set via `jwks` (inline) or `jwks_uri`, and sign a client assertion at the PAR and token
@@ -391,7 +392,7 @@ document; the server fetches and validates it (SSRF-hardened) on every request. 
   "redirect_uris": ["https://app.example.com/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
-  "scope": "atproto transition:generic",
+  "scope": "atproto repo:com.example.note?action=create&action=update",
   "token_endpoint_auth_method": "none",
   "application_type": "web",
   "dpop_bound_access_tokens": true
@@ -444,11 +445,13 @@ The shared protocol libraries are maintained in
 directory. **Path:** POST the signed genesis operation to `plc.directory` (or your own PLC service) and
 handle rotation-key updates.
 
-### Lexicon validation at runtime (compile-time only)
+### Runtime Lexicon resolution and validation (built)
 
-The codegen tool gives you typed records at compile time; records are not validated against their
-lexicon at write time. **Path:** add a runtime validator that checks a record against its lexicon
-schema in the PDS write endpoints.
+The PDS write endpoints resolve and validate custom record collections before create, update, and
+delete mutations. Set `Pds__LexiconDirectory` to a directory containing one
+`<collection>.json` Lexicon document per collection, or replace `ILexiconResolver` through the
+`PdsHost.Build` service configuration hook. The default resolver is non-authoritative for backwards
+compatibility; a host-provided authoritative resolver rejects unknown collections.
 
 ## Where to look next
 

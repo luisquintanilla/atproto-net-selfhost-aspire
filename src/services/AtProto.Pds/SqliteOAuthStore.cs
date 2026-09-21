@@ -47,7 +47,8 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
                 dpop_jkt              TEXT NOT NULL,
                 login_hint            TEXT NULL,
                 created_at            TEXT NOT NULL,
-                expires_at            TEXT NOT NULL
+                expires_at            TEXT NOT NULL,
+                permissions_json      TEXT NULL
             );
             CREATE TABLE IF NOT EXISTS oauth_codes (
                 code                  TEXT PRIMARY KEY,
@@ -61,7 +62,8 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
                 created_at            TEXT NOT NULL,
                 expires_at            TEXT NOT NULL,
                 consumed              INTEGER NOT NULL DEFAULT 0,
-                session_id            TEXT NULL
+                session_id            TEXT NULL,
+                permissions_json      TEXT NULL
             );
             CREATE TABLE IF NOT EXISTS oauth_sessions (
                 session_id TEXT PRIMARY KEY,
@@ -70,7 +72,8 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
                 scope      TEXT NOT NULL,
                 dpop_jkt   TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL
+                expires_at TEXT NOT NULL,
+                permissions_json TEXT NULL
             );
             CREATE TABLE IF NOT EXISTS oauth_refresh (
                 token      TEXT PRIMARY KEY,
@@ -85,6 +88,34 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             );
             """;
         cmd.ExecuteNonQuery();
+        EnsureColumn("oauth_par", "permissions_json", "TEXT NULL");
+        EnsureColumn("oauth_codes", "permissions_json", "TEXT NULL");
+        EnsureColumn("oauth_sessions", "permissions_json", "TEXT NULL");
+    }
+
+    private void EnsureColumn(string table, string column, string definition)
+    {
+        bool exists;
+        using (SqliteCommand check = _connection.CreateCommand())
+        {
+            check.CommandText = $"PRAGMA table_info({table});";
+            using SqliteDataReader reader = check.ExecuteReader();
+            exists = false;
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(1), column, StringComparison.Ordinal))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+        }
+        if (exists)
+            return;
+
+        using SqliteCommand alter = _connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        alter.ExecuteNonQuery();
     }
 
     public void SaveParRequest(ParRequest request)
@@ -96,10 +127,10 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             cmd.CommandText = """
                 INSERT INTO oauth_par
                     (request_uri, client_id, response_type, redirect_uri, scope, code_challenge,
-                     code_challenge_method, state, dpop_jkt, login_hint, created_at, expires_at)
+                     code_challenge_method, state, dpop_jkt, login_hint, created_at, expires_at, permissions_json)
                 VALUES
                     ($requestUri, $clientId, $responseType, $redirectUri, $scope, $codeChallenge,
-                     $codeChallengeMethod, $state, $dpopJkt, $loginHint, $createdAt, $expiresAt)
+                     $codeChallengeMethod, $state, $dpopJkt, $loginHint, $createdAt, $expiresAt, $permissions)
                 ON CONFLICT(request_uri) DO NOTHING;
                 """;
             cmd.Parameters.AddWithValue("$requestUri", request.RequestUri);
@@ -114,6 +145,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             cmd.Parameters.AddWithValue("$loginHint", (object?)request.LoginHint ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$createdAt", Iso(request.CreatedAt));
             cmd.Parameters.AddWithValue("$expiresAt", Iso(request.ExpiresAt));
+            cmd.Parameters.AddWithValue("$permissions", PermissionSnapshotCodec.Serialize(request.Permissions));
             cmd.ExecuteNonQuery();
         }
     }
@@ -125,7 +157,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             using SqliteCommand cmd = _connection.CreateCommand();
             cmd.CommandText = """
                 SELECT request_uri, client_id, response_type, redirect_uri, scope, code_challenge,
-                       code_challenge_method, state, dpop_jkt, login_hint, created_at, expires_at
+                       code_challenge_method, state, dpop_jkt, login_hint, created_at, expires_at, permissions_json
                 FROM oauth_par WHERE request_uri = $requestUri;
                 """;
             cmd.Parameters.AddWithValue("$requestUri", requestUri);
@@ -138,7 +170,10 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
                 reader.IsDBNull(7) ? null : reader.GetString(7),
                 reader.GetString(8),
                 reader.IsDBNull(9) ? null : reader.GetString(9),
-                ParseIso(reader.GetString(10)), ParseIso(reader.GetString(11)));
+                ParseIso(reader.GetString(10)), ParseIso(reader.GetString(11)))
+            {
+                Permissions = PermissionSnapshotCodec.Deserialize(reader.IsDBNull(12) ? null : reader.GetString(12)),
+            };
         }
     }
 
@@ -162,10 +197,10 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             cmd.CommandText = """
                 INSERT INTO oauth_codes
                     (code, client_id, did, redirect_uri, scope, code_challenge, code_challenge_method,
-                     dpop_jkt, created_at, expires_at, consumed, session_id)
+                     dpop_jkt, created_at, expires_at, consumed, session_id, permissions_json)
                 VALUES
                     ($code, $clientId, $did, $redirectUri, $scope, $codeChallenge, $codeChallengeMethod,
-                     $dpopJkt, $createdAt, $expiresAt, $consumed, $sessionId)
+                     $dpopJkt, $createdAt, $expiresAt, $consumed, $sessionId, $permissions)
                 ON CONFLICT(code) DO NOTHING;
                 """;
             cmd.Parameters.AddWithValue("$code", code.Code);
@@ -180,6 +215,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             cmd.Parameters.AddWithValue("$expiresAt", Iso(code.ExpiresAt));
             cmd.Parameters.AddWithValue("$consumed", code.Consumed ? 1 : 0);
             cmd.Parameters.AddWithValue("$sessionId", (object?)code.SessionId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$permissions", PermissionSnapshotCodec.Serialize(code.Permissions));
             cmd.ExecuteNonQuery();
         }
     }
@@ -191,7 +227,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             using SqliteCommand cmd = _connection.CreateCommand();
             cmd.CommandText = """
                 SELECT code, client_id, did, redirect_uri, scope, code_challenge, code_challenge_method,
-                       dpop_jkt, created_at, expires_at, consumed, session_id
+                       dpop_jkt, created_at, expires_at, consumed, session_id, permissions_json
                 FROM oauth_codes WHERE code = $code;
                 """;
             cmd.Parameters.AddWithValue("$code", code);
@@ -205,6 +241,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             {
                 Consumed = reader.GetInt32(10) != 0,
                 SessionId = reader.IsDBNull(11) ? null : reader.GetString(11),
+                Permissions = PermissionSnapshotCodec.Deserialize(reader.IsDBNull(12) ? null : reader.GetString(12)),
             };
         }
     }
@@ -231,11 +268,11 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
         {
             using SqliteCommand cmd = _connection.CreateCommand();
             cmd.CommandText = """
-                INSERT INTO oauth_sessions (session_id, client_id, did, scope, dpop_jkt, created_at, expires_at)
-                VALUES ($sessionId, $clientId, $did, $scope, $dpopJkt, $createdAt, $expiresAt)
+                INSERT INTO oauth_sessions (session_id, client_id, did, scope, dpop_jkt, created_at, expires_at, permissions_json)
+                VALUES ($sessionId, $clientId, $did, $scope, $dpopJkt, $createdAt, $expiresAt, $permissions)
                 ON CONFLICT(session_id) DO UPDATE SET
                     client_id = $clientId, did = $did, scope = $scope, dpop_jkt = $dpopJkt,
-                    expires_at = $expiresAt;
+                    expires_at = $expiresAt, permissions_json = $permissions;
                 """;
             cmd.Parameters.AddWithValue("$sessionId", session.SessionId);
             cmd.Parameters.AddWithValue("$clientId", session.ClientId);
@@ -244,6 +281,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
             cmd.Parameters.AddWithValue("$dpopJkt", session.DpopJkt);
             cmd.Parameters.AddWithValue("$createdAt", Iso(session.CreatedAt));
             cmd.Parameters.AddWithValue("$expiresAt", Iso(session.ExpiresAt));
+            cmd.Parameters.AddWithValue("$permissions", PermissionSnapshotCodec.Serialize(session.Permissions));
             cmd.ExecuteNonQuery();
         }
     }
@@ -254,7 +292,7 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
         {
             using SqliteCommand cmd = _connection.CreateCommand();
             cmd.CommandText = """
-                SELECT session_id, client_id, did, scope, dpop_jkt, created_at, expires_at
+                SELECT session_id, client_id, did, scope, dpop_jkt, created_at, expires_at, permissions_json
                 FROM oauth_sessions WHERE session_id = $sessionId;
                 """;
             cmd.Parameters.AddWithValue("$sessionId", sessionId);
@@ -263,7 +301,10 @@ public sealed class SqliteOAuthStore : IOAuthStore, IDisposable
                 return null;
             return new OAuthSession(
                 reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
-                reader.GetString(4), ParseIso(reader.GetString(5)), ParseIso(reader.GetString(6)));
+                reader.GetString(4), ParseIso(reader.GetString(5)), ParseIso(reader.GetString(6)))
+            {
+                Permissions = PermissionSnapshotCodec.Deserialize(reader.IsDBNull(7) ? null : reader.GetString(7)),
+            };
         }
     }
 

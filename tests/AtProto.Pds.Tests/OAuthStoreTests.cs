@@ -136,6 +136,36 @@ public abstract class OAuthStoreTestsBase : IDisposable
         Assert.Equal(par.ExpiresAt, loaded.ExpiresAt);
     }
 
+    [Fact]
+    public void ResolvedPermissionSnapshots_SurviveRoundTrip()
+    {
+        PermissionSnapshot snapshot = new(
+            allowsTransitionGeneric: false,
+            [new PermissionGrant("com.example.permissions.post",
+                [PermissionAction.Create, PermissionAction.Update])]);
+        ParRequest par = Par("urn:permissions") with { Permissions = snapshot };
+        AuthorizationCode code = Code("cod-permissions") with { Permissions = snapshot };
+        OAuthSession session = Session("ses-permissions") with { Permissions = snapshot };
+
+        Store.SaveParRequest(par);
+        Store.SaveAuthorizationCode(code);
+        Store.SaveSession(session);
+
+        AssertSnapshot(snapshot, Store.GetParRequest(par.RequestUri)!.Permissions);
+        AssertSnapshot(snapshot, Store.GetAuthorizationCode(code.Code)!.Permissions);
+        AssertSnapshot(snapshot, Store.GetSession(session.SessionId)!.Permissions);
+    }
+
+    private static void AssertSnapshot(PermissionSnapshot expected, PermissionSnapshot actual)
+    {
+        Assert.Equal(expected.AllowsTransitionGeneric, actual.AllowsTransitionGeneric);
+        PermissionGrant grant = Assert.Single(actual.Grants);
+        Assert.Equal("com.example.permissions.post", grant.Collection);
+        Assert.Equal(
+            [PermissionAction.Create, PermissionAction.Update],
+            grant.Actions.OrderBy(action => action).ToArray());
+    }
+
     public virtual void Dispose() => GC.SuppressFinalize(this);
 }
 
