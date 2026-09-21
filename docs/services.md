@@ -52,8 +52,14 @@ Code pointer: `src/services/AtProto.Pds/PdsHost.cs`.
 | `Pds__InstanceRelayUrl` | unset | Relay URL advertised in the instance record. Aspire sets this. |
 | `Pds__InstanceAppViewUrl` | unset | AppView URL advertised in the instance record. Aspire sets this. |
 | `Pds__AnnounceRelayUrls__0` | unset | Relay base URL to `requestCrawl` on startup so this PDS joins the federation. Aspire sets this. |
+| `Pds__LexiconDirectory` | unset | Optional directory of `<collection>.json` Lexicon documents used for runtime record validation. |
 
 Code pointer: `src/services/AtProto.Pds/PdsOptions.cs`.
+
+OAuth permission sets and custom permission/Lexicon implementations are generic service seams:
+register `IPermissionSetResolver` or `ILexiconResolver` with the `PdsHost.Build` service
+configuration hook. The built-in permission resolver rejects unresolved `include:` declarations, while
+the built-in Lexicon resolver remains non-authoritative unless a catalog is configured.
 
 ### Run standalone
 

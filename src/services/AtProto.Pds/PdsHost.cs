@@ -33,6 +33,9 @@ public static class PdsHost
         builder.Services.AddSingleton<BlobStore>();
         RegisterPersistence(builder.Services, options);
         RegisterOAuthStore(builder.Services, options);
+        RegisterPermissionResolver(builder.Services);
+        RegisterLexiconResolver(builder.Services, options);
+        builder.Services.AddSingleton<RuntimeLexiconValidator>();
         builder.Services.AddSingleton<PdsService>();
         builder.Services.AddHttpClient();
         builder.Services.AddCors(cors => cors.AddPolicy(OAuthCorsPolicy, policy => policy
@@ -134,6 +137,22 @@ public static class PdsHost
         }
     }
 
+    /// <summary>
+    /// Register the generic permission-set seam. Hosts that consume a shared permission/Lexicon
+    /// library replace this registration through <paramref name="configureServices"/>.
+    /// </summary>
+    private static void RegisterPermissionResolver(IServiceCollection services) =>
+        services.AddSingleton<IPermissionSetResolver, UnavailablePermissionSetResolver>();
+
+    /// <summary>Register a file-backed Lexicon catalog when the host supplies one.</summary>
+    private static void RegisterLexiconResolver(IServiceCollection services, PdsOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.LexiconDirectory))
+            services.AddSingleton<ILexiconResolver, UnavailableLexiconResolver>();
+        else
+            services.AddSingleton<ILexiconResolver>(_ => new FileSystemLexiconResolver(options.LexiconDirectory));
+    }
+
     /// <summary>Replay persisted accounts and blobs into the in-memory read models before serving.</summary>
     private static void RehydrateFromStorage(IServiceProvider services)
     {
@@ -192,6 +211,7 @@ public static class PdsHost
             HttpContext context,
             PdsService pds,
             IOAuthStore store,
+            IPermissionSetResolver permissionSets,
             ClientMetadataResolver resolver,
             DpopNonceService nonces) =>
         {
@@ -281,10 +301,17 @@ public static class PdsHost
             if (!client.AllowsScopes(requestedScopes))
                 return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidScope,
                     "requested scope exceeds the client's registered scope");
-            foreach (string s in requestedScopes)
-                if (!AuthorizationServerMetadata.DefaultScopes.Contains(s))
-                    return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidScope,
-                        $"unsupported scope '{s}'");
+
+            PermissionSnapshot permissions;
+            try
+            {
+                permissions = await PermissionScopeResolver.ResolveAsync(
+                    scope, permissionSets, now, context.RequestAborted);
+            }
+            catch (PermissionScopeException ex)
+            {
+                return OAuthJsonError(context, StatusCodes.Status400BadRequest, OAuthErrors.InvalidScope, ex.Message);
+            }
 
             string requestUri = OAuthIds.NewRequestUri();
             store.SaveParRequest(new ParRequest(
@@ -299,7 +326,10 @@ public static class PdsHost
                 DpopJkt: proof.Jkt,
                 LoginHint: loginHint,
                 CreatedAt: now,
-                ExpiresAt: now.AddSeconds(ParTtlSeconds)));
+                ExpiresAt: now.AddSeconds(ParTtlSeconds))
+            {
+                Permissions = permissions,
+            });
 
             context.Response.Headers["DPoP-Nonce"] = nonces.Current();
             context.Response.Headers.CacheControl = "no-store";
@@ -401,7 +431,10 @@ public static class PdsHost
                 CodeChallengeMethod: par.CodeChallengeMethod,
                 DpopJkt: par.DpopJkt,
                 CreatedAt: now,
-                ExpiresAt: now.AddSeconds(AuthorizationCodeTtlSeconds)));
+                ExpiresAt: now.AddSeconds(AuthorizationCodeTtlSeconds))
+            {
+                Permissions = par.Permissions,
+            });
             store.DeleteParRequest(par.RequestUri);
 
             return RedirectToClient(par.RedirectUri, new Dictionary<string, string?>
@@ -719,13 +752,20 @@ public static class PdsHost
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DateTimeOffset sessionExpiry = now.Add(client.IsConfidential ? ConfidentialSessionLifetime : PublicSessionLifetime);
-        store.SaveSession(new OAuthSession(sessionId, authCode.ClientId, authCode.Did, authCode.Scope, authCode.DpopJkt, now, sessionExpiry));
+        PermissionSnapshot permissions = authCode.Permissions;
+        if (permissions == PermissionSnapshot.Empty)
+            permissions = PermissionScopeResolver.ParseAccessTokenScope(authCode.Scope);
+        store.SaveSession(new OAuthSession(sessionId, authCode.ClientId, authCode.Did, authCode.Scope, authCode.DpopJkt, now, sessionExpiry)
+        {
+            Permissions = permissions,
+        });
 
-        string accessToken = IssueAccessToken(pds, authCode.Did, authCode.Scope, authCode.DpopJkt, issuer, now);
+        string accessScope = permissions.ToAccessTokenScope();
+        string accessToken = IssueAccessToken(pds, authCode.Did, accessScope, authCode.DpopJkt, issuer, now);
         string refreshToken = OAuthIds.NewRefreshToken();
         store.SaveRefreshToken(new RefreshTokenEntry(refreshToken, sessionId, sessionExpiry));
 
-        return TokenResponse(context, nonces, accessToken, refreshToken, authCode.Scope, authCode.Did);
+        return TokenResponse(context, nonces, accessToken, refreshToken, accessScope, authCode.Did);
     }
 
     private static IResult IssueFromRefresh(HttpContext context, PdsService pds, IOAuthStore store, DpopNonceService nonces, IFormCollection form, DpopProof proof, string issuer)
@@ -768,9 +808,13 @@ public static class PdsHost
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string newRefresh = OAuthIds.NewRefreshToken();
         store.SaveRefreshToken(new RefreshTokenEntry(newRefresh, session.SessionId, session.ExpiresAt));
-        string accessToken = IssueAccessToken(pds, session.Did, session.Scope, session.DpopJkt, issuer, now);
+        PermissionSnapshot permissions = session.Permissions;
+        if (permissions == PermissionSnapshot.Empty)
+            permissions = PermissionScopeResolver.ParseAccessTokenScope(session.Scope);
+        string accessScope = permissions.ToAccessTokenScope();
+        string accessToken = IssueAccessToken(pds, session.Did, accessScope, session.DpopJkt, issuer, now);
 
-        return TokenResponse(context, nonces, accessToken, newRefresh, session.Scope, session.Did);
+        return TokenResponse(context, nonces, accessToken, newRefresh, accessScope, session.Did);
     }
 
     private static string IssueAccessToken(PdsService pds, string did, string scope, string jkt, string issuer, DateTimeOffset now) =>
@@ -810,12 +854,14 @@ public static class PdsHost
     /// either. A DPoP <c>Authorization</c> scheme selects the OAuth path; anything else falls through to
     /// the existing session path, so app passwords keep working unchanged.
     /// </summary>
-    private static Account AuthenticateWrite(HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces)
+    private static WriteAuthorization AuthenticateWrite(HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces)
     {
         string authorization = ctx.Request.Headers.Authorization.ToString();
         if (authorization.StartsWith("DPoP ", StringComparison.OrdinalIgnoreCase))
             return AuthenticateDpopAccess(ctx, pds, store, nonces, authorization["DPoP ".Length..].Trim());
-        return pds.Authenticate(ctx.Request.Headers.Authorization);
+        return new WriteAuthorization(
+            pds.Authenticate(ctx.Request.Headers.Authorization),
+            new PermissionSnapshot(allowsTransitionGeneric: true, Array.Empty<PermissionGrant>()));
     }
 
     /// <summary>
@@ -825,7 +871,7 @@ public static class PdsHost
     /// or stale nonce, or a replayed proof, returns a recoverable challenge with a fresh
     /// <c>DPoP-Nonce</c>; the client retries. On success a fresh resource-server nonce is advertised.
     /// </summary>
-    private static Account AuthenticateDpopAccess(HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces, string accessToken)
+    private static WriteAuthorization AuthenticateDpopAccess(HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces, string accessToken)
     {
         string issuer = pds.Identity.PublicUrl.GetLeftPart(UriPartial.Authority);
         if (!AccessToken.TryValidate(accessToken, pds.Identity.JwtSecret, issuer, out AccessTokenClaims claims))
@@ -855,28 +901,42 @@ public static class PdsHost
         if (!store.TryRegisterJti(proof.Jti, DateTimeOffset.UtcNow.AddMinutes(10)))
             throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidDpopProof,
                 "DPoP proof has already been used", refreshNonce: true);
-        if (!ScopeGrants(claims.Scope, WriteScope))
-            throw ResourceChallenge(ctx, nonces, StatusCodes.Status403Forbidden, OAuthErrors.InsufficientScope,
-                $"this action requires the {WriteScope} scope", refreshNonce: false);
+        PermissionSnapshot permissions;
+        try
+        {
+            permissions = PermissionScopeResolver.ParseAccessTokenScope(claims.Scope);
+        }
+        catch (PermissionScopeException ex)
+        {
+            throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidToken,
+                $"the access token scope is invalid: {ex.Message}", refreshNonce: false);
+        }
 
         Account account = pds.Accounts.ByDid(claims.Subject)
             ?? throw ResourceChallenge(ctx, nonces, StatusCodes.Status401Unauthorized, OAuthErrors.InvalidToken,
                 "unknown account", refreshNonce: false);
 
         ctx.Response.Headers["DPoP-Nonce"] = nonces.Current();
-        return account;
+        return new WriteAuthorization(account, permissions);
     }
 
-    /// <summary>The transitional scope that maps to the app-password write level.</summary>
-    private const string WriteScope = "transition:generic";
+    private sealed record WriteAuthorization(Account Account, PermissionSnapshot Permissions);
 
-    /// <summary>True when a space-delimited <c>scope</c> string grants the required scope.</summary>
-    private static bool ScopeGrants(string scope, string required)
+    private static void RequireWritePermission(
+        HttpContext context,
+        PermissionSnapshot permissions,
+        string collection,
+        PermissionAction action)
     {
-        foreach (string part in scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            if (string.Equals(part, required, StringComparison.Ordinal))
-                return true;
-        return false;
+        if (permissions.Allows(collection, action))
+            return;
+        string message = $"the OAuth grant does not allow {PermissionSnapshot.ActionName(action)} on {collection}";
+        context.Response.Headers.WWWAuthenticate =
+            $"DPoP error=\"{OAuthErrors.InsufficientScope}\", error_description=\"{message}\", algs=\"ES256\"";
+        throw new XrpcException(
+            StatusCodes.Status403Forbidden,
+            OAuthErrors.InsufficientScope,
+            message);
     }
 
     /// <summary>
@@ -943,46 +1003,52 @@ public static class PdsHost
 
     private static void MapRepo(WebApplication app)
     {
-        app.MapPost("/xrpc/com.atproto.repo.createRecord", (CreateRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces) =>
+        app.MapPost("/xrpc/com.atproto.repo.createRecord", async (CreateRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces, RuntimeLexiconValidator lexicons) =>
         {
-            Account account = AuthenticateWrite(ctx, pds, store, nonces);
-            RequireRepo(pds, account, req.Repo);
+            WriteAuthorization authorization = AuthenticateWrite(ctx, pds, store, nonces);
+            RequireRepo(pds, authorization.Account, req.Repo);
+            RequireWritePermission(ctx, authorization.Permissions, req.Collection, PermissionAction.Create);
+            await lexicons.ValidateAsync(req.Collection, req.Rkey, req.Record, ctx.RequestAborted);
             object record = DataModel.FromJson(req.Record)
                 ?? throw new XrpcException(400, "InvalidRequest", "Record must be an object.");
             RepoWrite write = string.IsNullOrEmpty(req.Rkey)
                 ? RepoWrite.Create(req.Collection, record)
                 : RepoWrite.Create(req.Collection, req.Rkey!, record);
-            CommitResult result = pds.Commit(account, new[] { write });
+            CommitResult result = pds.Commit(authorization.Account, new[] { write });
             AtProto.Repo.RepoOp op = result.Ops[0];
             return Results.Ok(new
             {
-                uri = $"at://{account.Did}/{op.Path}",
+                uri = $"at://{authorization.Account.Did}/{op.Path}",
                 cid = op.Cid!.Value.ToString(),
                 commit = new { cid = result.Commit.ToString(), rev = result.Rev },
             });
         });
 
-        app.MapPost("/xrpc/com.atproto.repo.putRecord", (PutRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces) =>
+        app.MapPost("/xrpc/com.atproto.repo.putRecord", async (PutRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces, RuntimeLexiconValidator lexicons) =>
         {
-            Account account = AuthenticateWrite(ctx, pds, store, nonces);
-            RequireRepo(pds, account, req.Repo);
+            WriteAuthorization authorization = AuthenticateWrite(ctx, pds, store, nonces);
+            RequireRepo(pds, authorization.Account, req.Repo);
+            RequireWritePermission(ctx, authorization.Permissions, req.Collection, PermissionAction.Update);
+            await lexicons.ValidateAsync(req.Collection, req.Rkey, req.Record, ctx.RequestAborted);
             object record = DataModel.FromJson(req.Record)
                 ?? throw new XrpcException(400, "InvalidRequest", "Record must be an object.");
-            CommitResult result = pds.Commit(account, new[] { RepoWrite.Update(req.Collection, req.Rkey, record) });
+            CommitResult result = pds.Commit(authorization.Account, new[] { RepoWrite.Update(req.Collection, req.Rkey, record) });
             AtProto.Repo.RepoOp op = result.Ops[0];
             return Results.Ok(new
             {
-                uri = $"at://{account.Did}/{op.Path}",
+                uri = $"at://{authorization.Account.Did}/{op.Path}",
                 cid = op.Cid!.Value.ToString(),
                 commit = new { cid = result.Commit.ToString(), rev = result.Rev },
             });
         });
 
-        app.MapPost("/xrpc/com.atproto.repo.deleteRecord", (DeleteRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces) =>
+        app.MapPost("/xrpc/com.atproto.repo.deleteRecord", async (DeleteRecordRequest req, HttpContext ctx, PdsService pds, IOAuthStore store, DpopNonceService nonces, RuntimeLexiconValidator lexicons) =>
         {
-            Account account = AuthenticateWrite(ctx, pds, store, nonces);
-            RequireRepo(pds, account, req.Repo);
-            CommitResult result = pds.Commit(account, new[] { RepoWrite.Delete(req.Collection, req.Rkey) });
+            WriteAuthorization authorization = AuthenticateWrite(ctx, pds, store, nonces);
+            RequireRepo(pds, authorization.Account, req.Repo);
+            RequireWritePermission(ctx, authorization.Permissions, req.Collection, PermissionAction.Delete);
+            await lexicons.ValidateCollectionAndKeyAsync(req.Collection, req.Rkey, ctx.RequestAborted);
+            CommitResult result = pds.Commit(authorization.Account, new[] { RepoWrite.Delete(req.Collection, req.Rkey) });
             return Results.Ok(new { commit = new { cid = result.Commit.ToString(), rev = result.Rev } });
         });
 
@@ -1021,7 +1087,10 @@ public static class PdsHost
     {
         app.MapPost("/xrpc/com.atproto.repo.uploadBlob", async (HttpContext ctx, PdsService pds, BlobStore blobs, IPdsPersistence persistence, IOAuthStore store, DpopNonceService nonces) =>
         {
-            _ = AuthenticateWrite(ctx, pds, store, nonces);
+            WriteAuthorization authorization = AuthenticateWrite(ctx, pds, store, nonces);
+            if (!authorization.Permissions.AllowsTransitionGeneric)
+                throw new XrpcException(StatusCodes.Status403Forbidden, OAuthErrors.InsufficientScope,
+                    "uploadBlob requires transition:generic until blob permissions are wired.");
 
             using var body = new MemoryStream();
             await ctx.Request.Body.CopyToAsync(body, ctx.RequestAborted);

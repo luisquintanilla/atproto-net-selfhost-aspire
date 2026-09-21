@@ -92,6 +92,6 @@ The wire is not limited to one stack. Several small self-hosted PDS instances ca
 
 ## What this is not yet
 
-Most of the stack is done: M0 through M5, the live SignalR board, the feel-real explorer, most of the M6 stretch work (federation discovery, `did:plc` creation, blob support, stricter Relay MST validation, lexicon-to-C# codegen, and multi-targeting the shared libraries), and the atproto OAuth authorization server. Remaining follow-ups are runtime Lexicon validation and publishing `did:plc` genesis operations to a PLC directory; the shared protocol packages are already published to GitHub Packages.
+Most of the stack is done: M0 through M5, the live SignalR board, the feel-real explorer, most of the M6 stretch work (federation discovery, `did:plc` creation, blob support, stricter Relay MST validation, lexicon-to-C# codegen, runtime Lexicon validation, generic OAuth repository permissions, and multi-targeting the shared libraries), and the atproto OAuth authorization server. The remaining follow-up is publishing `did:plc` genesis operations to a PLC directory; the shared protocol packages are already published to GitHub Packages.
 
 For the implementation status, see [plan.md](plan.md). For the exact service surfaces, see [services.md](services.md).

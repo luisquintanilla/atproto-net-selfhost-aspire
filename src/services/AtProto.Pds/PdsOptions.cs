@@ -39,6 +39,13 @@ public sealed class PdsOptions
     /// <summary>Path to the SQLite database file when <see cref="Storage"/> is <c>sqlite</c>. When
     /// empty, a <c>pds.db</c> file is created under the process working directory.</summary>
     public string? SqlitePath { get; set; }
+
+    /// <summary>
+    /// Optional directory containing one <c>&lt;collection&gt;.json</c> Lexicon file per record
+    /// collection. Hosts can replace the resolver through the service configuration hook on
+    /// <see cref="PdsHost.Build(string[], Action{PdsOptions}?, Action{IServiceCollection}?)"/>.
+    /// </summary>
+    public string? LexiconDirectory { get; set; }
 }
 
 /// <summary>

@@ -19,7 +19,11 @@ public sealed record ParRequest(
     string DpopJkt,
     string? LoginHint,
     DateTimeOffset CreatedAt,
-    DateTimeOffset ExpiresAt);
+    DateTimeOffset ExpiresAt)
+{
+    /// <summary>The normalized permissions captured when the PAR was accepted.</summary>
+    public PermissionSnapshot Permissions { get; init; } = PermissionSnapshot.Empty;
+}
 
 /// <summary>
 /// A single-use authorization code minted once the user approves the request. It carries everything
@@ -39,6 +43,9 @@ public sealed record AuthorizationCode(
     DateTimeOffset CreatedAt,
     DateTimeOffset ExpiresAt)
 {
+    /// <summary>The normalized permissions captured from the approved PAR.</summary>
+    public PermissionSnapshot Permissions { get; init; } = PermissionSnapshot.Empty;
+
     /// <summary>True once the code has been exchanged for tokens. A second exchange is a reuse attack.</summary>
     public bool Consumed { get; init; }
 
@@ -58,7 +65,11 @@ public sealed record OAuthSession(
     string Scope,
     string DpopJkt,
     DateTimeOffset CreatedAt,
-    DateTimeOffset ExpiresAt);
+    DateTimeOffset ExpiresAt)
+{
+    /// <summary>The resolved permission snapshot fixed for this OAuth session.</summary>
+    public PermissionSnapshot Permissions { get; init; } = PermissionSnapshot.Empty;
+}
 
 /// <summary>
 /// A single-use refresh token bound to a session. Presenting it rotates it (mint a new one, consume

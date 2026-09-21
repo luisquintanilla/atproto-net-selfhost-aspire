@@ -205,9 +205,18 @@ spec expects.
 
 ### Scopes
 
-The MVP supports `atproto` (always required) and `transition:generic`, which maps to the write level the
-existing app-password path already grants. The other transitional scopes (`transition:chat.bsky`,
-`transition:email`) and granular permission scopes are a later addition.
+The PDS supports `atproto` (always required), the explicit compatibility scope
+`transition:generic`, and granular repository permissions. A granular grant is either
+`repo:<collection>` (all repository actions), `repo:<collection>?action=create&action=update` (selected
+actions), or `repo:*?action=create` (a full collection wildcard with selected actions). Partial
+collection wildcards are rejected.
+
+OAuth PAR resolves `include:<permission-set-nsid>` declarations through the configured permission-set
+resolver. The resulting grants are validated once, expanded into the access-token scope, and persisted
+with the PAR, authorization code, and OAuth session. Expired or stale permission sets and unknown
+permission declarations fail the authorization request; a refresh reuses the persisted snapshot rather
+than resolving the set again. Hosts can replace the generic resolver seam when the shared atproto-dotnet
+permission library is available.
 
 ## The threat model and the security bar
 
@@ -232,6 +241,8 @@ Because `client_id` is a URL we fetch, a malicious client could point it at an i
 - The `redirect_uri` must exactly match one listed in the client's metadata.
 - The code carries the PKCE challenge, the DPoP thumbprint, the granted scope, and your DID, so none of
   those can be swapped at the token step.
+- The resolved permission snapshot is carried through PAR, authorization code, session, refresh, and
+  access-token issuance, so a later permission-set change cannot widen an existing session.
 
 ### PKCE
 
@@ -260,6 +271,7 @@ proofs are never rejected.
 
 - Access tokens live 15 minutes or less; refresh tokens are single-use with rotation and revocation.
 - A refresh token is bound to its DPoP key and client; a cross-key or cross-client refresh is refused.
+- Repository writes enforce the snapshot's collection and action grants before any mutation.
 
 ### Interface and transport
 
@@ -281,14 +293,17 @@ proofs are never rejected.
   key-continuity binding that requires the client-assertion key to differ from the DPoP key. Confidential
   sessions get a longer lifetime than public ones.
 - The `atproto` and `transition:generic` scopes.
+- Collection/action permission enforcement for `createRecord`, `putRecord`, and `deleteRecord`, including
+  permission-set expansion and durable OAuth snapshots.
+- Runtime Lexicon resolution and validation through an optional file-backed catalog or host-provided
+  resolver; the default non-authoritative resolver preserves existing unconfigured collections.
 - The full PAR, PKCE, DPoP-with-nonces, and DID-anchored discovery machinery above.
 - RS enforcement on the write endpoints, additive to the existing session-JWT path.
 - An in-memory store by default, and a durable SQLite store under the production profile.
 
-**Fast follow (designed for, not yet in):**
-
-- The remaining transitional scopes (`transition:chat.bsky`, `transition:email`) and granular
-  permission scopes.
+**Not included in this generic slice:** Mycelium-specific permission-set schemas, governance,
+deployment, UI, or scenario code. Hosts may add protocol-defined permission-set resolvers through the
+service registration seam.
 
 Keeping the boundary explicit means the first cut is small enough to verify thoroughly, and the deferred
 items have a clear home.
